@@ -1,0 +1,295 @@
+{
+  
+  "realm": "ds-2026-realm",
+  "enabled": true,
+  "defaultDefaultClientScopes": [
+    "clientes:read",
+    "clientes:write",
+    "conductores:read",
+    "conductores:write",
+    "ubicacion:read",
+    "ubicacion:write",
+    "despacho:read",
+    "despacho:write",
+    "viajes:read",
+    "viajes:write",
+    "pagos:read",
+    "pagos:write",
+    "reservas:read",
+    "reservas:write"
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "Cliente",
+        "description": "Usuario que solicita o reserva viajes"
+      },
+      {
+        "name": "Conductor",
+        "description": "Usuario que ofrece servicios de traslado"
+      },
+      {
+        "name": "Operador",
+        "description": "Administrador del sistema de movilidad"
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "clientes:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [ { "name": "mapper", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false, "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "userinfo.token.claim": "true", "id.token.claim": "true", "access.token.claim": "true" } } ]
+    },
+    {
+      "name": "clientes:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [ { "name": "mapper", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false, "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "userinfo.token.claim": "true", "id.token.claim": "true", "access.token.claim": "true" } } ]
+    },
+    {
+      "name": "conductores:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "conductores:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "ubicacion:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "ubicacion:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "despacho:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "despacho:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "viajes:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "viajes:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "pagos:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "pagos:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "reservas:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "reservas:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "grupo-01",
+      "name": "M2 - Clientes",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "68230b9a-f540-4e16-9f56-19180f303676",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["clientes:read", "clientes:write", "viajes:read", "reservas:read"]
+    },
+    {
+      "clientId": "grupo-02",
+      "name": "M3 - Conductores",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "58536bf8-8501-41c9-b411-786b6d654c25",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["conductores:read", "conductores:write", "ubicacion:read"]
+    },
+    {
+      "clientId": "grupo-03",
+      "name": "M4 - Ubicacion",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "21cd6616-6571-4ee7-be29-0f781f77c74e",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["ubicacion:read", "ubicacion:write", "conductores:read"]
+    },
+    {
+      "clientId": "grupo-04",
+      "name": "M5 - Despacho",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "6be1bec1-9472-499f-ab37-883d78f57829",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["despacho:read", "despacho:write", "clientes:read", "conductores:read", "ubicacion:read"]
+    },
+    {
+      "clientId": "grupo-05",
+      "name": "M6 - Viajes",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "9e676dd4-2790-4191-9f1f-06c6c6fd71e5",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["viajes:read", "viajes:write", "despacho:read", "pagos:read"]
+    },
+    {
+      "clientId": "grupo-06",
+      "name": "M7 - Pagos",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "8dc00e75-ccea-4d1a-be3d-b586733e256c",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["pagos:read", "pagos:write", "viajes:read"]
+    },
+    {
+      "clientId": "grupo-07",
+      "name": "Cliente Generico 07",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dummy-secret-07",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "grupo-08",
+      "name": "M9 - Reservas",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "248f42b5-7007-47d1-a94e-e8941f352f6f",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["reservas:read", "reservas:write", "clientes:read", "ubicacion:read", "despacho:write"]
+    },
+    {
+      "clientId": "grupo-09",
+      "name": "Cliente Generico 09",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "3a0ca5f2-00cc-4016-b7a2-7aad04eda3af",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "grupo-10",
+      "name": "Cliente Generico 10",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "66ff9787-4fa5-46b3-b546-4ccbe604d233",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "grupo-11",
+      "name": "Cliente Generico 11",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "ef7f0900-8de5-46c0-b813-ce76d61e0158",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "grupo-12",
+      "name": "Cliente Generico 12",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "ebbd9f47-b6ff-4efe-9fdd-71651a87139c",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "grupo-13",
+      "name": "Cliente Generico 13",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "404249de-18ba-403c-b45c-d82c446e2a2a",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-grupo-01",
+      "enabled": true,
+      "serviceAccountClientId": "grupo-01",
+      "realmRoles": ["Operador"]
+    },
+    {
+      "username": "service-account-grupo-02",
+      "enabled": true,
+      "serviceAccountClientId": "grupo-02",
+      "realmRoles": ["Operador"]
+    },
+    {
+      "id": "b55573fa-60ed-4a01-a218-8adcfa18384e",
+      "username": "cliente-demo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Juan",
+      "lastName": "Perez",
+      "email": "cliente@movilidad.com",
+      "credentials": [
+        {
+          "type": "password",
+          "userLabel": "My password",
+          "secretData": "{\"value\":\"aRhofYek4hgOTwfP+Aj3hS6S73cWl7qlKMMLQYcQQcU=\",\"salt\":\"hPTh2NF5pmBX5Kd32h72HA==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+        }
+      ],
+      "realmRoles": ["Cliente"]
+    }
+  ]
+}
