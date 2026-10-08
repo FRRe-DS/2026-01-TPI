@@ -8,7 +8,7 @@
 
 ## 👥 Equipo Integrador
 *   **Sonza, Matias Javier** - Legajo: 26573
-*   *[Nombre del Integrante 2]* - Legajo: *[Legajo 2]*
+*   *Paluch Ruberto, Julián* - Legajo: 27229
 *   *[Nombre del Integrante 3]* - Legajo: *[Legajo 3]*
 
 ---
