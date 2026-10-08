@@ -7,6 +7,7 @@
 ---
 
 ## 👥 Equipo Integrador
+*   **Brandt, Carina Noemí** - Legajo: 24672
 *   **Sonza, Matias Javier** - Legajo: 26573
 *   *Paluch Ruberto, Julián* - Legajo: 27229
 *   *[Nombre del Integrante 3]* - Legajo: *[Legajo 3]*
