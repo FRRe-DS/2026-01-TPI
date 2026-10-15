@@ -46,3 +46,42 @@ def listar_clientes():
         cliente["_id"] = str(cliente["_id"])
         
     return clientes
+
+@app.put("/api/v1/clientes/{id_mongo}", tags=["Clientes"])
+def actualizar_cliente(id_mongo: str, cliente_actualizado: Cliente):
+    # 1. Verificamos que el ID sea válido
+    if not ObjectId.is_valid(id_mongo):
+        raise HTTPException(status_code=400, detail="Formato de ID inválido")
+    
+    # 2. Convertimos el modelo validado de Pydantic a un diccionario
+    datos_actualizar = cliente_actualizado.model_dump()
+    
+    # 3. Le decimos a MongoDB que busque por ID y aplique los nuevos datos con $set
+    resultado = coleccion_clientes.update_one(
+        {"_id": ObjectId(id_mongo)},
+        {"$set": datos_actualizar}
+    )
+    
+    # 4. Si matched_count es 0, significa que el ID no existe en la base de datos
+    if resultado.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        
+    return {
+        "mensaje": "Cliente actualizado exitosamente",
+        "modificado": resultado.modified_count > 0 # Devuelve true si realmente se cambió algún dato
+    }
+
+@app.delete("/api/v1/clientes/{id_mongo}", tags=["Clientes"])
+def eliminar_cliente(id_mongo: str):
+    # 1. Verificamos que el ID sea válido
+    if not ObjectId.is_valid(id_mongo):
+        raise HTTPException(status_code=400, detail="Formato de ID inválido")
+    
+    # 2. Le ordenamos a MongoDB que busque y elimine el documento
+    resultado = coleccion_clientes.delete_one({"_id": ObjectId(id_mongo)})
+    
+    # 3. Si deleted_count es 0, significa que no encontró a nadie con ese ID
+    if resultado.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        
+    return {"mensaje": "Cliente eliminado exitosamente"}
