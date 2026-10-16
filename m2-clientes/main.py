@@ -40,22 +40,31 @@ def obtener_cliente(id_mongo: str, usuario_actual: dict = Depends(validar_token)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
         
-    # 4. MongoDB devuelve el campo _id como un objeto binario. Lo convertimos a texto normal para poder mostrarlo.
+    # --- NUEVA REGLA DE PROPIEDAD (Autorización) ---
+    # 4. Verificamos que el dueño del documento sea el mismo que está haciendo la petición
+    if cliente.get("usuario_id") != usuario_actual.get("sub"):
+        raise HTTPException(status_code=403, detail="No tienes permiso para acceder a este cliente")
+        
+    # 5. MongoDB devuelve el campo _id como un objeto binario. Lo convertimos a texto normal.
     cliente["_id"] = str(cliente["_id"])
     
     return cliente
 
 @app.get("/api/v1/clientes", tags=["Clientes"])
 def listar_clientes(usuario_actual: dict = Depends(validar_token)):
-    # Si la ejecución llega a esta línea, es porque el token es válido
-    # Extraemos todos los documentos de la colección
-    clientes = list(coleccion_clientes.find())
+    # 1. Extraemos tu ID de Keycloak
+    mi_id = usuario_actual.get("sub")
     
-    # Convertimos el ObjectId binario a texto para cada cliente
-    for cliente in clientes:
+    # 2. Le pedimos a Mongo que traiga ÚNICAMENTE los documentos que tengan tu ID
+    cursor = coleccion_clientes.find({"usuario_id": mi_id})
+    
+    # 3. Procesamos la lista para convertir los ObjectIds a texto
+    lista_clientes = []
+    for cliente in cursor:
         cliente["_id"] = str(cliente["_id"])
+        lista_clientes.append(cliente)
         
-    return clientes
+    return lista_clientes
 
 
 @app.put("/api/v1/clientes/{id_mongo}", tags=["Clientes"])
@@ -64,19 +73,24 @@ def actualizar_cliente(id_mongo: str, cliente_actualizado: Cliente, usuario_actu
     if not ObjectId.is_valid(id_mongo):
         raise HTTPException(status_code=400, detail="Formato de ID inválido")
     
-    # 2. Convertimos el modelo validado de Pydantic a un diccionario
-    datos_actualizar = cliente_actualizado.model_dump()
+    # 2. BUSCAMOS el cliente actual en la base de datos PRIMERO
+    cliente = coleccion_clientes.find_one({"_id": ObjectId(id_mongo)})
     
-    # 3. Le decimos a MongoDB que busque por ID y aplique los nuevos datos con $set
+    # 3. Si no existe, error 404
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    # 4. AHORA SÍ comparamos los permisos
+    if cliente.get("usuario_id") != usuario_actual.get("sub"):
+        raise HTTPException(status_code=403, detail="No tienes permiso para modificar a este cliente")
+    
+    # 5. Todo es válido y seguro. Convertimos y actualizamos.
+    datos_actualizar = cliente_actualizado.model_dump()
     resultado = coleccion_clientes.update_one(
         {"_id": ObjectId(id_mongo)},
         {"$set": datos_actualizar}
     )
     
-    # 4. Si matched_count es 0, significa que el ID no existe en la base de datos
-    if resultado.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        
     return {
         "mensaje": "Cliente actualizado exitosamente",
         "modificado": resultado.modified_count > 0 # Devuelve true si realmente se cambió algún dato
@@ -88,11 +102,18 @@ def eliminar_cliente(id_mongo: str, usuario_actual: dict = Depends(validar_token
     if not ObjectId.is_valid(id_mongo):
         raise HTTPException(status_code=400, detail="Formato de ID inválido")
     
-    # 2. Le ordenamos a MongoDB que busque y elimine el documento
-    resultado = coleccion_clientes.delete_one({"_id": ObjectId(id_mongo)})
+    # 2. BUSCAMOS el cliente actual en la base de datos PRIMERO
+    cliente = coleccion_clientes.find_one({"_id": ObjectId(id_mongo)})
     
-    # 3. Si deleted_count es 0, significa que no encontró a nadie con ese ID
-    if resultado.deleted_count == 0:
+    # 3. Si no existe, error 404
+    if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        
+
+    # 4. AHORA SÍ comparamos los permisos
+    if cliente.get("usuario_id") != usuario_actual.get("sub"):
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar a este cliente")
+    
+    # 5. Todo es válido y seguro. Eliminamos de Mongo.
+    coleccion_clientes.delete_one({"_id": ObjectId(id_mongo)})
+    
     return {"mensaje": "Cliente eliminado exitosamente"}
