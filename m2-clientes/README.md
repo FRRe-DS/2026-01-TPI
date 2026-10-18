@@ -2,39 +2,28 @@
 
 Microservicio encargado del registro, almacenamiento y consulta de perfiles de clientes, direcciones y preferencias para la plataforma de movilidad.
 
-## Tecnologías Utilizadas
-- **Backend:** Python con FastAPI
-- **Validación de Datos:** Pydantic (con validación de correos electrónicos)
-- **Base de Datos:** MongoDB (ejecutado mediante contenedor Docker)
-- **Documentación Automática:** Swagger UI (integrada por FastAPI)
+## Cómo instalarlo y correrlo
 
----
+Las instrucciones completas (requisitos, Keycloak, MongoDB, esta API y el front) están en el README principal:
+**[../README.md → Cómo instalarlo y correrlo](../README.md#-cómo-instalarlo-y-correrlo-windows)**
 
-## Guía de Inicio Rápido para el Equipo
+Resumen para correr esta API, con Keycloak y MongoDB ya levantados:
 
-Si deseas levantar este módulo en tu entorno local, sigue estos pasos:
+```powershell
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+.\venv\Scripts\Activate.ps1      # la primera vez: py -3.13 -m venv venv y pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
-### 1. Levantar la Base de Datos (Docker)
-Asegúrate de tener Docker abierto y ejecuta en la raíz de este módulo:
-`docker compose up -d`
+Swagger: http://localhost:8000/docs
 
-### 2. Configurar el Entorno Virtual de Python
-Crea y activa tu entorno virtual aislado:
-`python -m venv venv`
-`.\venv\Scripts\activate`
+## Archivos
 
-### 3. Instalar Dependencias
-Carga las librerías necesarias especificadas en la receta del proyecto:
-`pip install -r requirements.txt`
-
-### 4. Iniciar el Servidor de Desarrollo
-`uvicorn main:app --reload`
-
-Una vez activo, ingresa a tu navegador en `http://localhost:8000/docs` para ver y probar la interfaz interactiva de Swagger.
-
----
-
-## Endpoints Disponibles
-- **`POST /api/v1/clientes`**: Registra un nuevo cliente con sus direcciones y preferencias en MongoDB.
-- **`GET /api/v1/clientes`**: Devuelve la lista completa de clientes registrados.
-- **`GET /api/v1/clientes/{id_mongo}`**: Consulta el perfil detallado de un cliente específico mediante su identificador único.
+| Archivo | Qué hace |
+|---|---|
+| `main.py` | Endpoints de la API y configuración de CORS |
+| `models.py` | Modelos Pydantic: Cliente, Dirección y Preferencias |
+| `database.py` | Conexión a MongoDB |
+| `security.py` | Validación del token de Keycloak |
+| `requirements.txt` | Librerías de Python (usar Python 3.12 o 3.13) |
+| `docker-compose.yml` | MongoDB local |
