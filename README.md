@@ -82,41 +82,165 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 
 ## 🚦 ¿En qué estado está?
 
+**Hecho**
+
 - [x] API base con FastAPI y documentación Swagger
-- [x] Alta, listado y consulta de clientes (con direcciones y preferencias) en MongoDB
+- [x] CRUD de clientes en MongoDB: alta, listado, consulta, modificación y baja, con direcciones y preferencias (RF-2.1, base de RF-2.2 / RF-2.3)
 - [x] Validación de datos con Pydantic (incluye formato de email)
-- [ ] Pasar la configuración a variables de entorno (`.env`)
-- [ ] Modificación de perfil, estado de cuenta y bloqueos, guardados en MySQL (RF-2.1 / RF-2.6)
-- [ ] Escuchar `ViajeFinalizado` en RabbitMQ para armar el historial (RF-2.4)
-- [ ] Calificaciones idempotentes (RF-2.5)
-- [ ] Caché de perfiles con Redis
-- [ ] Validar el token de Keycloak en cada endpoint
-- [ ] Dockerizar el servicio completo (hoy solo MongoDB corre en Docker)
+- [x] Validación del token de Keycloak en todos los endpoints
+- [x] Reglas de propiedad: cada usuario solo ve, modifica o elimina su propio perfil (`403` si no es suyo)
+- [x] CORS habilitado para el front (orígenes configurables con `CORS_ORIGINS`)
+- [x] Front en React + Mantine con login de Keycloak para crear, editar y eliminar el perfil
+
+**Pendiente**
+
+- [ ] Contrato OpenAPI de M2 en el repo de la consigna (`contratos/m2_clientes/openapi.yml`) (RNF-03)
+- [ ] Pasar el resto de la configuración a variables de entorno (`.env`): URL de MongoDB y de Keycloak (RNF-06)
+- [ ] Estado de cuenta y bloqueos administrativos, con permisos por rol Operador (RF-2.6)
+- [ ] Preferencias de tipo de vehículo, comunicación y accesibilidad (RF-2.3)
+- [ ] Calificación del conductor sin duplicados por viaje (RF-2.5)
+- [ ] Historial de viajes obtenido desde M6 (RF-2.4)
+- [ ] Unicidad de email y de usuario de Keycloak por perfil
+- [ ] Pruebas unitarias y de integración (RNF-07)
+- [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
+- [ ] Caché de perfiles con Redis y eventos con RabbitMQ (TP2)
 
 ---
 
-## 🚀 Probalo en tu máquina
+## 🚀 Cómo instalarlo y correrlo (Windows)
 
-Necesitás **Docker** y **Python 3.12+**.
+Hay que levantar cuatro piezas: **Keycloak** (login), **MongoDB** (base de datos), la **API de M2** y el **front**. Keycloak y MongoDB corren en Docker; la API en Python y el front en Node.js.
 
-```bash
-cd m2-clientes
-docker compose up -d              # levanta MongoDB
-python -m venv venv
-source venv/bin/activate          # en Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
+```mermaid
+flowchart LR
+    FRONT["Front (React)<br/>localhost:5173"] -->|"1. login"| KC["Keycloak<br/>localhost:8080"]
+    FRONT -->|"2. pedido + token"| API["API M2<br/>localhost:8000"]
+    API -->|"3. valida token"| KC
+    API -->|"4. datos"| MONGO[("MongoDB<br/>localhost:27017")]
+```
+
+### 1. Instalar (una sola vez)
+
+| Programa | Para qué | Cómo verificar |
+|---|---|---|
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) — versión **AMD64** (Intel o AMD), ARM64 solo para procesadores ARM | Corre Keycloak, Postgres y MongoDB | `docker --version` |
+| **WSL** — Docker lo pide la primera vez que se abre. En PowerShell **como administrador**: `wsl --install` y reiniciar la PC | Docker lo necesita en Windows | `wsl --status` |
+| [Python](https://www.python.org/downloads/windows/) **3.12 o 3.13** — ⚠️ **no** 3.14/3.15: algunas librerías todavía no tienen versión para ellas y `pip install` falla pidiendo "Microsoft Visual C++" | Corre la API | `py list` o `python --version` |
+| [Node.js](https://nodejs.org) **LTS** (22.12 o superior) | Corre el front; trae `npm` | `node --version` |
+
+Con el instalador nuevo de python.org se puede agregar la 3.13 con `py install 3.13`.
+
+### 2. Levantar Keycloak y MongoDB
+
+Abrir Docker Desktop y esperar a que diga **Engine running**. Después, en PowerShell:
+
+```powershell
+cd C:\Proyectos\2026-01-TPI\keycloak
+docker compose up -d
+
+cd ..\m2-clientes
+docker compose up -d
+
+docker ps        # tienen que aparecer keycloak, postgres y mongo
+```
+
+- `docker compose up -d` lee el `docker-compose.yml` de la carpeta, descarga las imágenes la primera vez y deja los contenedores corriendo en segundo plano (`-d`).
+- Keycloak tarda 30-60 segundos en arrancar. Se prueba en http://localhost:8080 (consola de administración: `admin` / `ds2026`).
+
+### 3. Configurar Keycloak (una sola vez, en tu Keycloak local)
+
+Entrar a http://localhost:8080 → **Administration Console** (`admin` / `ds2026`) → elegir el realm **ds-2026-realm** arriba a la izquierda.
+
+**a) Cliente para el front** — **Clients → Create client**. El asistente tiene 3 pantallas:
+
+1. *General settings*: Client type `OpenID Connect`, Client ID **`m2-frontend`** → Next
+2. *Capability config*: **Client authentication: Off** (así es público, sin secreto) y solo **Standard flow** tildado → Next
+3. *Login settings*:
+   - Valid redirect URIs: `http://localhost:5173/*`
+   - Valid post logout redirect URIs: `http://localhost:5173/*`
+   - Web origins: `http://localhost:5173`
+   - **Save**
+
+Después se pueden revisar en *Clients → m2-frontend → Settings → Access settings*.
+
+**b) Contraseña del usuario de prueba** — **Users → cliente-demo → Credentials → Reset password**: poner una contraseña (por ejemplo `ds2026`), **Temporary: Off** → Save. El usuario `cliente-demo` tiene rol *Cliente*.
+
+**c) (Opcional) Tokens más largos** — por defecto duran 5 minutos. *Realm settings → Tokens → Access Token Lifespan* = 1 hora → Save.
+
+> Estos cambios quedan en la base de Keycloak de cada uno. Si se borra con `docker compose down -v`, hay que repetirlos.
+
+### 4. Correr la API de M2 (ventana de PowerShell 1)
+
+La primera vez:
+
+```powershell
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+py -3.13 -m venv venv                 # crea el entorno virtual con Python 3.13
+.\venv\Scripts\Activate.ps1           # lo activa: la línea empieza con (venv)
+pip install -r requirements.txt       # instala las librerías
+uvicorn main:app --reload             # arranca la API en http://localhost:8000
+```
+
+Las veces siguientes alcanza con:
+
+```powershell
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+.\venv\Scripts\Activate.ps1
 uvicorn main:app --reload
 ```
 
-Abrí **http://localhost:8000/docs** y vas a ver Swagger: una página donde podés probar cada endpoint desde el navegador, sin instalar nada más.
+- Si al activar dice *"la ejecución de scripts está deshabilitada"*: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (una vez) y volver a activar.
+- Si dice *"uvicorn no se reconoce"*: no estás en `m2-clientes` o no activaste el `venv`.
+- Las líneas `GET / 404 Not Found` y `GET /favicon.ico 404` son normales: la API no tiene página en `/`.
+- Documentación interactiva (Swagger): http://localhost:8000/docs
+
+### 5. Correr el front (ventana de PowerShell 2)
+
+```powershell
+cd C:\Proyectos\2026-01-TPI\frontend
+npm install        # solo la primera vez o si cambió package.json
+npm run dev        # arranca el front en http://localhost:5173
+```
+
+Abrir **http://localhost:5173** → redirige al login de Keycloak → entrar con `cliente-demo` y la contraseña del paso 3b. Ahí se crea, edita o elimina el perfil. Más detalle en [frontend/README.md](frontend/README.md).
+
+### 6. (Opcional) Probar la API sin el front
+
+Pedir un token con la cuenta de servicio del grupo (rol Operador) y copiarlo al portapapeles:
+
+```powershell
+$r = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/realms/ds-2026-realm/protocol/openid-connect/token" -Body @{ grant_type="client_credentials"; client_id="grupo-01"; client_secret="68230b9a-f540-4e16-9f56-19180f303676" }; $r.access_token | Set-Clipboard
+```
+
+En http://localhost:8000/docs → **Authorize** → pegar el token → probar los endpoints con **Try it out → Execute**. Si responde `"El token ha expirado"`, pedir otro y en Authorize hacer Logout y pegar el nuevo.
+
+### Para apagar todo
+
+- Ctrl+C en las ventanas de uvicorn y de `npm run dev`.
+- `docker compose down` en `keycloak` y en `m2-clientes`. **No** usar `down -v`: borra los datos.
+
+### Problemas comunes
+
+| Problema | Solución |
+|---|---|
+| Docker: *"WSL is not installed"* | PowerShell como administrador → `wsl --install` → reiniciar |
+| `pip install` falla con *"Microsoft Visual C++ 14.0 is required"* | Estás en Python 3.14/3.15. Borrar `venv` (`Remove-Item -Recurse -Force venv`) y recrearlo con `py -3.13 -m venv venv` |
+| *"port is already allocated"* | Otro programa usa el puerto 8080, 27017, 8000 o 5173 |
+| El front dice que no puede conectar con Keycloak | Keycloak no está corriendo o falta el cliente `m2-frontend` (paso 3a) |
+| El front no carga el perfil (error de red/CORS) | La API no está corriendo, o hay que reiniciar uvicorn después de actualizar el código |
+| Keycloak no muestra el realm `ds-2026-realm` | En `keycloak`: `docker compose down -v` y `docker compose up -d` (se pierde la configuración del paso 3) |
 
 ### Endpoints disponibles hoy
 
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `POST` | `/api/v1/clientes` | Crea un cliente con sus direcciones y preferencias |
-| `GET` | `/api/v1/clientes` | Lista todos los clientes |
-| `GET` | `/api/v1/clientes/{id_mongo}` | Trae un cliente por su ID (`400` si el ID tiene un formato inválido, `404` si no existe) |
+| `GET` | `/api/v1/clientes` | Lista los clientes del usuario del token |
+| `GET` | `/api/v1/clientes/{id_mongo}` | Trae un cliente por su ID (`400` ID inválido, `403` no es tuyo, `404` no existe) |
+| `PUT` | `/api/v1/clientes/{id_mongo}` | Reemplaza los datos del cliente |
+| `DELETE` | `/api/v1/clientes/{id_mongo}` | Elimina el cliente |
+
+Todos requieren el encabezado `Authorization: Bearer <token>`.
 
 Ejemplo de cliente para crear con el `POST`:
 
@@ -143,8 +267,6 @@ Ejemplo de cliente para crear con el `POST`:
 }
 ```
 
-Más detalle sobre cómo correrlo en [m2-clientes/README.md](m2-clientes/README.md).
-
 ---
 
 ## 📁 Estructura del repo
@@ -152,10 +274,12 @@ Más detalle sobre cómo correrlo en [m2-clientes/README.md](m2-clientes/README.
 ```
 2026-01-TPI/
 ├── keycloak/                 # Servidor de identidad (login y roles) + configuración del realm
+├── frontend/                 # Front en React + Vite + Mantine (login con Keycloak)
 └── m2-clientes/              # Nuestro microservicio
     ├── main.py               # Endpoints de la API
     ├── models.py             # Cómo es un Cliente, una Dirección y las Preferencias
     ├── database.py           # Conexión a MongoDB
+    ├── security.py           # Validación del token de Keycloak
     ├── requirements.txt      # Librerías de Python
     └── docker-compose.yml    # MongoDB local
 ```

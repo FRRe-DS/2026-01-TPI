@@ -1,10 +1,22 @@
 from fastapi import FastAPI, status, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+import os
 from security import validar_token
 from bson import ObjectId
 from models import Cliente
 from database import coleccion_clientes
 
 app = FastAPI(title="Módulo 2 - Clientes", version="1.0.0")
+
+# CORS: permite que el front (React, en otro puerto) llame a esta API desde el navegador.
+# Los orígenes permitidos se configuran con la variable de entorno CORS_ORIGINS (separados por coma).
+origenes_permitidos = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origenes_permitidos,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/v1/clientes", tags=["Clientes"])
 def crear_cliente(cliente: Cliente, usuario_actual: dict = Depends(validar_token)):
