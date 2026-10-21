@@ -1,6 +1,6 @@
 # Front de M2 · Clientes
 
-Página web para que un cliente inicie sesión con Keycloak y cree, vea, edite o elimine su perfil (datos, direcciones frecuentes y preferencias) usando la API de M2.
+Página web para que un cliente inicie sesión con Keycloak y cree, vea y edite su perfil usando la API de M2, según el contrato común (`contratos/m2_clientes/openapi.yml`). Las direcciones frecuentes y las preferencias se vuelven a agregar en la etapa 2.
 
 **Tecnologías:** React 19 + Vite (proyecto y servidor de desarrollo) + Mantine (componentes visuales) + keycloak-js (login).
 
@@ -42,8 +42,8 @@ frontend/
 └── src/
     ├── main.jsx               # hace el login y arranca la app
     ├── keycloak.js            # conexión con Keycloak
-    ├── api.js                 # llamadas a la API de M2 con el token
-    ├── App.jsx                # pantalla principal: carga, crea, edita, elimina
+    ├── api.js                 # llamadas a la API de M2 con el token (rutas del contrato)
+    ├── App.jsx                # pantalla principal: carga el perfil por el sub del token, lo crea o lo edita (PATCH)
     └── components/
-        └── ClienteForm.jsx    # formulario de perfil, direcciones y preferencias
+        └── ClienteForm.jsx    # formulario de datos personales
 ```

@@ -1,8 +1,21 @@
+# Conexión a MongoDB.
+# El _id de cada perfil es el clienteId, que es el "sub" del token del cliente.
 from pymongo import MongoClient
 
-# Por ahora usamos localhost. Más adelante, cumpliendo el RNF-06, lo pasaremos a un archivo .env
-MONGO_URL = "mongodb://localhost:27017"
+import config
 
-cliente_mongo = MongoClient(MONGO_URL)
-db = cliente_mongo["m2_clientes_db"]
-coleccion_clientes = db["clientes"]
+cliente_mongo = MongoClient(config.MONGO_URL, serverSelectionTimeoutMS=config.MONGO_TIMEOUT_MS, tz_aware=True)
+db = cliente_mongo[config.MONGO_DB]
+
+
+def coleccion_clientes():
+    return db["clientes"]
+
+
+def base_disponible() -> bool:
+    """Devuelve True si MongoDB responde (lo usa /health)."""
+    try:
+        cliente_mongo.admin.command("ping")
+        return True
+    except Exception:
+        return False
