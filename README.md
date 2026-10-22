@@ -208,7 +208,7 @@ npm install        # solo la primera vez o si cambió package.json
 npm run dev        # arranca el front en http://localhost:5173
 ```
 
-Abrir **http://localhost:5173** → redirige al login de Keycloak → entrar con `cliente-demo` y la contraseña del paso 3b. Ahí se crea y se edita el perfil. Más detalle en [frontend/README.md](frontend/README.md).
+Abrir **http://localhost:5173** → aparece la pantalla de bienvenida → **Ya tengo cuenta, ingresar** lleva al login de Keycloak → entrar con `cliente-demo` y la contraseña del paso 3b. Ahí se crea y se edita el perfil. Más detalle en [frontend/README.md](frontend/README.md).
 
 ### 6. (Opcional) Probar la API sin el front
 

@@ -1,4 +1,6 @@
-// Punto de entrada: primero hace login con Keycloak y después muestra la app.
+// Punto de entrada: averigua si ya hay una sesión de Keycloak y decide qué mostrar.
+// - Sin sesión: la pantalla de bienvenida, con los botones para ingresar o crear cuenta.
+// - Con sesión: la app.
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { MantineProvider, createTheme } from '@mantine/core'
@@ -8,6 +10,7 @@ import '@mantine/notifications/styles.css'
 
 import keycloak from './keycloak'
 import App from './App'
+import Bienvenida from './components/Bienvenida'
 
 const theme = createTheme({
   primaryColor: 'teal',
@@ -18,16 +21,17 @@ const root = ReactDOM.createRoot(document.getElementById('root'))
 
 keycloak
   .init({
-    onLoad: 'login-required', // si no hay sesión, manda a la pantalla de login
+    // check-sso: si ya hay sesión la usa; si no, vuelve sin pedir login (no fuerza la pantalla de Keycloak)
+    onLoad: 'check-sso',
     pkceMethod: 'S256',
     checkLoginIframe: false,
   })
-  .then(() => {
+  .then((autenticado) => {
     root.render(
       <React.StrictMode>
         <MantineProvider theme={theme} defaultColorScheme="auto">
           <Notifications position="top-right" />
-          <App />
+          {autenticado ? <App /> : <Bienvenida />}
         </MantineProvider>
       </React.StrictMode>,
     )
