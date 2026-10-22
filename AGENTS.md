@@ -107,6 +107,14 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
   - qué pasos manuales hacen falta (por ejemplo, en Keycloak);
   - qué no pudiste verificar.
 
+## Memoria
+
+- Al empezar, lee `MEMORY.md` para conocer el estado del proyecto y las decisiones tomadas.
+- Al terminar una tarea, actualízalo: estado actual, decisiones importantes (con su porqué) y errores a evitar.
+- Mantenlo breve (máximo ~50 líneas): resume o elimina lo que ya no aporte.
+- Si algo se convierte en una regla permanente, propón moverlo a `AGENTS.md` en lugar de dejarlo en la memoria.
+- No guardes nunca datos sensibles (claves, tokens, datos personales).
+
 ## Límites
 
 - **Siempre:**
@@ -114,7 +122,8 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
   - correr `python -m pytest` y, si tocaste el front, `npm run build`;
   - agregar pruebas para cada operación o regla nueva;
   - mantener los README al día (los endpoints y el estado del módulo);
-  - leer la configuración de `config.py` o de variables de entorno.
+  - leer la configuración de `config.py` o de variables de entorno;
+  - actualizar `MEMORY.md` al terminar cada tarea.
 - **Preguntá antes de:**
   - agregar dependencias (Python o npm) o cambiar versiones;
   - crear archivos o carpetas nuevos fuera de los patrones existentes;
