@@ -6,7 +6,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Rama `feature/contrato-m2-etapa1` (sin push):
   - Etapa 1: `/health` y perfil (POST, GET y PATCH) según el contrato, roles, problem+json, `X-Request-Id`, config por `.env`, 41 tests y front adaptado.
   - `AGENTS.md` y este `MEMORY.md`.
-- Sin probar contra Keycloak y MongoDB reales: los tests usan mongomock y tokens de prueba.
+- Probada en real el 21/10 (Keycloak con roles en mayúsculas, MongoDB, front y Swagger como OPERADOR): todo OK.
 - Pendiente de otros: M5 (grupos 4 y 13) no confirmó si le alcanza con `obtenerEstadoCuenta`; formato del token de M1 abierto en el issue #9 de `2026-17-TPI`; M6 sin contrato.
 - M9 firma sus tokens de SERVICIO con HS256 y una clave compartida mientras M1 sea simulado (issue #9, 20/10). Hoy solo aceptamos RS256 por JWKS: hay que soportarlo por configuración antes o durante la etapa 3.
 
@@ -33,7 +33,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **Trabajo por etapas,** cada una en su rama `feature/...` con su PR; nunca en `main`.
 
 ## Próximos pasos
-1. Crear los roles en mayúsculas en Keycloak local (paso 3b2), probar el front y la API, y hacer push y PR de la rama de la etapa 1.
+1. Hacer push y PR de la rama de la etapa 1 hacia `main`.
 2. Etapa 2: direcciones (CRUD con paginación y filtro `tipo`) y preferencias (GET/PUT), con su parte en el front.
 3. Etapa 3: estado de cuenta y bloqueos (SERVICIO solo en `obtenerEstadoCuenta`, `estado` calculado, aceptar tokens HS256 de M9).
 4. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
