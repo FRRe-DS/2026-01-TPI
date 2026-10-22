@@ -3,8 +3,8 @@
 Microservicio de clientes de la plataforma de movilidad. Implementa el contrato común de M2,
 acordado entre el Grupo 1 y el Grupo 17: [`../contratos/m2_clientes/openapi.yml`](../contratos/m2_clientes/openapi.yml).
 
-Hoy cubre la **etapa 1**: salud y perfil del cliente (RF-2.1). Las demás partes del contrato
-(direcciones, preferencias, historial, calificaciones, estado de cuenta y bloqueos) vienen en las próximas etapas.
+Hoy cubre las **etapas 1 y 2**: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2) y preferencias (RF-2.3).
+Las demás partes del contrato (historial, calificaciones, estado de cuenta y bloqueos) vienen en las próximas etapas.
 
 ## Cómo instalarlo y correrlo
 
@@ -46,7 +46,9 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 
 | Archivo | Qué hace |
 |---|---|
-| `main.py` | Endpoints de la API |
+| `main.py` | Arma la app: middleware, manejo de errores y rutas |
+| `rutas/comunes.py` | Lo que comparten las rutas: `Idempotency-Key`, paginación, búsqueda del perfil, fecha actual |
+| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py` | Endpoints, un archivo por recurso del contrato |
 | `models.py` | Modelos del perfil con los nombres y las reglas del contrato |
 | `security.py` | Validación del token y de los roles (`CLIENTE`, `OPERADOR`, `SERVICIO`) |
 | `errores.py` | Respuestas de error en formato `application/problem+json` (RFC 9457) |
@@ -68,3 +70,14 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 - **`Idempotency-Key` se exige en el `POST`**, pero todavía no se guarda: un reintento con la misma clave
   da `409` en vez de la respuesta original. Se completa en la etapa 5.
 - **Sin baja del perfil:** el contrato no la tiene (RF-2.1 pide crear, consultar y actualizar).
+
+## Decisiones de la etapa 2
+
+- **Direcciones en su propia colección** (`direcciones`, con el `clienteId` del dueño e índice por cliente y fecha),
+  porque se listan paginadas y se editan de a una. **Las preferencias van dentro del perfil** (campo `preferencias`),
+  porque son una por cliente.
+- **Listado de direcciones: las más nuevas primero.** El contrato no fija el orden.
+- **Una dirección de otro cliente da `404`** para la ruta pedida (al `CLIENTE` antes le corta el `403` por no ser el dueño).
+- **`PUT` de preferencias reemplaza todo:** lo que no se manda (por ejemplo, las observaciones) se borra.
+- **Las fechas se recortan a milisegundos** antes de guardarlas, porque MongoDB no guarda más precisión;
+  así lo que devuelve un `POST` es igual a lo que devuelve después un `GET`.

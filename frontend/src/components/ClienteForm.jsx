@@ -1,7 +1,7 @@
 // Formulario del perfil: datos personales del cliente, con los campos del contrato
 // (nombre, apellido, teléfono y fecha de nacimiento).
-// Las direcciones frecuentes y las preferencias tienen sus propias operaciones en el contrato;
-// se vuelven a agregar al front en la etapa 2.
+// Las direcciones frecuentes y las preferencias tienen sus propias operaciones en el contrato
+// y sus propias tarjetas (DireccionesCard y PreferenciasCard).
 // Se usa tanto para crear como para editar; recibe los datos iniciales en "inicial".
 import { useState } from 'react'
 import { Button, Card, Group, SimpleGrid, Stack, TextInput, Title } from '@mantine/core'

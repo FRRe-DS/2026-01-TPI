@@ -92,11 +92,11 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
 - [x] Pruebas automáticas de la API, que además verifican las respuestas contra el contrato (RNF-07)
-- [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil
+- [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
+- [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
 
 **Pendiente**
 
-- [ ] Etapa 2: direcciones frecuentes y preferencias de tipo de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [ ] Etapa 3: estado de cuenta y bloqueos administrativos, con rol `SERVICIO` para M5 y M9 (RF-2.6)
 - [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
@@ -261,6 +261,13 @@ Siguen el contrato común [`contratos/m2_clientes/openapi.yml`](contratos/m2_cli
 | `POST` | `/api/v1/clientes` | `CLIENTE` | Crea el perfil del usuario del token. Exige `Idempotency-Key`. `409` si ya tiene uno |
 | `GET` | `/api/v1/clientes/{clienteId}` | `CLIENTE` (el suyo), `OPERADOR` | Trae el perfil |
 | `PATCH` | `/api/v1/clientes/{clienteId}` | `CLIENTE` (el suyo) | Cambia solo los campos enviados |
+| `GET` | `/api/v1/clientes/{clienteId}/direcciones` | `CLIENTE` (las suyas), `OPERADOR` | Lista paginada (`page` desde 0, `size` hasta 100), más nuevas primero. Filtro opcional `tipo` |
+| `POST` | `/api/v1/clientes/{clienteId}/direcciones` | `CLIENTE` (el suyo) | Agrega una dirección (`tipo`, `texto` y opcionalmente `alias` y `coordenadas`). Exige `Idempotency-Key` |
+| `GET` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya), `OPERADOR` | Trae una dirección |
+| `PATCH` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Cambia solo los campos enviados |
+| `DELETE` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Elimina la dirección (`204`) |
+| `GET` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas), `OPERADOR` | Trae las preferencias; si nunca se guardaron, listas vacías |
+| `PUT` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas) | Reemplaza todas las preferencias |
 
 Todos menos `/health` requieren `Authorization: Bearer <token>`. Los errores vuelven en formato `application/problem+json`, y toda respuesta trae `X-Request-Id`.
 
@@ -285,7 +292,8 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
 ├── keycloak/                 # Servidor de identidad (login y roles) + configuración del realm
 ├── frontend/                 # Front en React + Vite + Mantine (login con Keycloak)
 └── m2-clientes/              # Nuestro microservicio
-    ├── main.py               # Endpoints de la API
+    ├── main.py               # Arma la app: middleware, manejo de errores y rutas
+    ├── rutas/                # Endpoints, un archivo por recurso del contrato
     ├── models.py             # Cómo es un Cliente (nombres y reglas del contrato)
     ├── security.py           # Validación del token y de los roles
     ├── errores.py            # Respuestas de error en formato problem+json

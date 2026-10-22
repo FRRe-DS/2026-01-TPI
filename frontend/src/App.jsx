@@ -1,6 +1,7 @@
 // Pantalla principal: muestra el perfil del cliente logueado.
 // - Si todavía no tiene perfil (la API responde 404), muestra el formulario para crearlo (POST).
-// - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PATCH).
+// - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PATCH),
+//   y debajo sus direcciones frecuentes y sus preferencias.
 // El contrato no tiene baja del perfil, así que no hay botón para eliminarlo.
 import { useEffect, useState } from 'react'
 import {
@@ -11,6 +12,8 @@ import { notifications } from '@mantine/notifications'
 import keycloak from './keycloak'
 import { miClienteId, obtenerCliente, crearCliente, actualizarCliente } from './api'
 import ClienteForm from './components/ClienteForm'
+import DireccionesCard from './components/DireccionesCard'
+import PreferenciasCard from './components/PreferenciasCard'
 
 export default function App() {
   const [cliente, setCliente] = useState(null) // el perfil guardado, o null si no hay
@@ -100,7 +103,7 @@ export default function App() {
                 </Group>
                 <Text c="dimmed">
                   {cliente
-                    ? 'Revisá y actualizá tus datos personales.'
+                    ? 'Revisá y actualizá tus datos, direcciones y preferencias de viaje.'
                     : 'Todavía no tenés un perfil de cliente. Completá tus datos para empezar a viajar.'}
                 </Text>
               </div>
@@ -111,6 +114,10 @@ export default function App() {
                 textoBoton={cliente ? 'Guardar cambios' : 'Crear perfil'}
                 onGuardar={guardar}
               />
+
+              {/* Direcciones y preferencias necesitan que el perfil exista (si no, la API da 404) */}
+              {cliente && <DireccionesCard clienteId={cliente.clienteId} />}
+              {cliente && <PreferenciasCard clienteId={cliente.clienteId} />}
             </Stack>
           )}
         </Container>

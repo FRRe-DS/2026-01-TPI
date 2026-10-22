@@ -26,6 +26,7 @@ def base_en_memoria(monkeypatch):
     mongo = mongomock.MongoClient(tz_aware=True)
     db = mongo["test"]
     monkeypatch.setattr(database, "coleccion_clientes", lambda: db["clientes"])
+    monkeypatch.setattr(database, "coleccion_direcciones", lambda: db["direcciones"])
     monkeypatch.setattr(database, "base_disponible", lambda: True)
     monkeypatch.setattr(security, "obtener_clave", lambda token: _CLAVE_PUBLICA)
     return db
@@ -50,3 +51,30 @@ def auth(roles, sub=None, **extra):
     encabezados = {"Authorization": f"Bearer {token(roles, sub)}"}
     encabezados.update(extra)
     return encabezados
+
+
+# ------------------------------------------------------------ Ayudas comunes a todos los tests
+
+PERFIL = {"nombre": "Ana", "apellido": "Gómez", "telefono": "+5493624000000"}
+
+
+def crear_perfil(cliente_http, sub, cuerpo=None):
+    return cliente_http.post(
+        "/api/v1/clientes",
+        json=cuerpo if cuerpo is not None else PERFIL,
+        headers=auth(["CLIENTE"], sub, **{"Idempotency-Key": str(uuid.uuid4())}),
+    )
+
+
+def es_problema(r, status, generico=True):
+    """Verifica que sea un error problem+json del contrato, con X-Request-Id."""
+    from contrato import validar
+
+    assert r.status_code == status, r.text
+    assert r.headers["content-type"].startswith("application/problem+json")
+    cuerpo = r.json()
+    validar("Problema", cuerpo)
+    if generico:
+        validar("ProblemaGenerico", cuerpo)
+    assert r.headers.get("X-Request-Id")
+    return cuerpo

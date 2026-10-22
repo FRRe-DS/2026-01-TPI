@@ -3,10 +3,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
-- Rama `feature/contrato-m2-etapa1` (sin push):
-  - Etapa 1: `/health` y perfil (POST, GET y PATCH) según el contrato, roles, problem+json, `X-Request-Id`, config por `.env`, 41 tests y front adaptado.
-  - `AGENTS.md` y este `MEMORY.md`.
-- Probada en real el 21/10 (Keycloak con roles en mayúsculas, MongoDB, front y Swagger como OPERADOR): todo OK.
+- Ramas: las etapas se integran en `desarrollo-m2` (sale de `main`); al terminar las 5 etapas, un único PR a `main`. Se mergea con merge commit.
+- Etapa 1 (perfil, `/health`, roles, problem+json, `X-Request-Id`, `.env`) + `AGENTS.md` y `MEMORY.md`: PR #2, mergeado en `desarrollo-m2`. Probada en real el 21/10.
+- Etapa 2 (direcciones y preferencias, RF-2.2 y RF-2.3): rama `feature/contrato-m2-etapa2`, PR abierto hacia `desarrollo-m2`. 105 tests OK; probada en real el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR): todo OK.
 - Pendiente de otros: M5 (grupos 4 y 13) no confirmó si le alcanza con `obtenerEstadoCuenta`; formato del token de M1 abierto en el issue #9 de `2026-17-TPI`; M6 sin contrato.
 - M9 firma sus tokens de SERVICIO con HS256 y una clave compartida mientras M1 sea simulado (issue #9, 20/10). Hoy solo aceptamos RS256 por JWKS: hay que soportarlo por configuración antes o durante la etapa 3.
 
@@ -21,21 +20,23 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Git desde Linux: usar `git -c core.autocrlf=true`, si no todo aparece modificado. Para crear ramas y commitear hace falta permiso de borrado (archivos `.lock`).
 - Los errores de validación de FastAPI se convierten a 400; el 422 queda para reglas de negocio.
 - `DuplicateKeyError` es un `PyMongoError`: capturarlo en el endpoint, si no da 503.
-- Starlette solo lista en `Allow` los métodos de la primera ruta que coincide; el manejador del 405 los junta todos.
+- Starlette solo lista en `Allow` los métodos de la primera ruta que coincide; el manejador del 405 los junta todos con `ruta.matches(scope)`, porque desde FastAPI 0.143 `include_router` envuelve las rutas.
+- MongoDB guarda milisegundos: usar `ahora()` de `rutas/comunes.py`, si no el POST y el GET devuelven fechas distintas.
 
 ## Decisiones (y por qué)
 - **Adoptamos el contrato del Grupo 17:** cumple todos los RF y resuelve mejor los RNF-03, 09, 13 y 14. Además, RNF-02 pide dos implementaciones por módulo con el mismo contrato.
 - **`clienteId` = `sub`, usado como `_id` en MongoDB:** lo pide el contrato y garantiza un solo perfil por usuario.
 - **Roles en `realm_access.roles` y en un claim `roles` en la raíz:** sirve con Keycloak y con lo que se acuerde en el #9.
 - **`estado` siempre `ACTIVO`** hasta la etapa 3; el `Idempotency-Key` se exige pero no se guarda hasta la etapa 5.
-- **El front quedó con solo los datos personales:** las direcciones y preferencias tienen sus propias rutas en el contrato (etapa 2).
+- **Direcciones en su propia colección; preferencias dentro del perfil:** las direcciones se paginan y editan de a una; las preferencias son 1 a 1.
+- **`main.py` dividido en `rutas/`** (un archivo por recurso): crece con cada etapa.
+- **Listado de direcciones: más nuevas primero** (el contrato no fija orden). Una dirección de otro cliente da 404.
 - **No tocamos el realm** (`keycloak/`): es de Matías; los pasos manuales están en el README.
-- **Trabajo por etapas,** cada una en su rama `feature/...` con su PR; nunca en `main`.
+- **Trabajo por etapas en `desarrollo-m2`:** el usuario prefiere integrar todo ahí y mergear a `main` una sola vez al final.
 
 ## Próximos pasos
-1. Hacer push y PR de la rama de la etapa 1 hacia `main`.
-2. Etapa 2: direcciones (CRUD con paginación y filtro `tipo`) y preferencias (GET/PUT), con su parte en el front.
-3. Etapa 3: estado de cuenta y bloqueos (SERVICIO solo en `obtenerEstadoCuenta`, `estado` calculado, aceptar tokens HS256 de M9).
-4. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
-5. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
-6. Seguir el issue #9 (token de M1) y la respuesta de M5.
+1. Mergear el PR de la etapa 2 en `desarrollo-m2`.
+2. Etapa 3: estado de cuenta y bloqueos (SERVICIO solo en `obtenerEstadoCuenta`, `estado` calculado, aceptar tokens HS256 de M9).
+3. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
+4. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
+5. Seguir el issue #9 (token de M1) y la respuesta de M5.
