@@ -15,7 +15,7 @@
 | **Brandt, Carina Noemí** | 24672 |
 | **Sonza, Matias Javier** | 26573 |
 | **Paluch Ruberto, Julián** | 27229 |
-| *[Nombre del Integrante 3]* | *[Legajo 3]* |
+| **Nuñez, Lucas Emanuel** | 23959 |
 
 ---
 
@@ -29,10 +29,10 @@ A nosotros nos toca **M2: Clientes**. Pensalo como la **"ficha del pasajero"**: 
 
 | Requisito | Qué significa en criollo |
 |---|---|
-| **RF-2.1 / RF-2.6** — Perfil y estado de cuenta | Alta, consulta y modificación de los datos del cliente (nombre, mail, teléfono). También saber si la cuenta está activa o bloqueada: un operador puede bloquear una cuenta, por ejemplo ante un reclamo. |
-| **RF-2.2 / RF-2.3** — Direcciones y preferencias | Guardar lugares frecuentes ("Casa", "Facu", "Trabajo") para no escribirlos cada vez, y cómo le gusta viajar: tipo de vehículo, necesidades de accesibilidad, viaje silencioso, etc. |
-| **RF-2.4** — Historial de viajes | Un resumen de los viajes que hizo el cliente. No lo calculamos nosotros: nos enteramos cuando otro módulo nos avisa que un viaje terminó. |
-| **RF-2.5** — Calificar al conductor | El cliente puntúa al conductor. Si por un corte de internet la app manda la misma calificación dos veces, se guarda **una sola vez**. A eso se le dice ser **idempotente**. |
+| **RF-2.1 / RF-2.6** — Perfil y estado de cuenta | Alta, consulta y modificación de los datos del cliente (nombre, apellido, teléfono y fecha de nacimiento; el mail queda en M1, el módulo de identidad). También saber si la cuenta está activa o bloqueada: un operador puede bloquear una cuenta, por ejemplo ante un reclamo, y levantar el bloqueo después. Los bloqueos nunca se borran: queda el historial. |
+| **RF-2.2 / RF-2.3** — Direcciones y preferencias | Guardar lugares frecuentes ("Casa", "Facu", "Trabajo"), favoritos o recientes, para no escribirlos cada vez, y cómo le gusta viajar: tipo de vehículo (auto o moto), por qué canales recibir avisos (email, SMS, notificaciones) y necesidades de accesibilidad. |
+| **RF-2.4** — Historial de viajes | Un resumen de los viajes que hizo el cliente. No lo guardamos nosotros: cada vez que el cliente lo pide, M2 se lo pregunta a M6 (el módulo de viajes) por su API. Si M6 no contesta a tiempo, M2 responde con un error claro en vez de quedarse esperando. |
+| **RF-2.5** — Calificar al conductor | Después de un viaje terminado, el cliente puntúa al conductor (de 1 a 5). Se permite **una sola calificación por viaje**: un segundo intento se rechaza. Y si por un corte de internet la app manda el mismo pedido dos veces, no se duplica: a eso se le dice ser **idempotente**. |
 
 ---
 
@@ -40,18 +40,21 @@ A nosotros nos toca **M2: Clientes**. Pensalo como la **"ficha del pasajero"**: 
 
 ```mermaid
 flowchart LR
-    FRONT["App / Front"] -->|"REST"| M2["M2 · Clientes"]
-    M5["M5 · Despacho"] -->|"REST: perfil y preferencias"| M2
-    M9["M9 · Reservas"] -->|"REST: perfil"| M2
-    M6["M6"] -.->|"evento ViajeFinalizado (RabbitMQ)"| M2
+    FRONT["App / Front"] -->|"REST: perfil, direcciones, preferencias…"| M2["M2 · Clientes"]
+    M5["M5 · Despacho"] -->|"REST: estado de cuenta"| M2
+    M9["M9 · Reservas"] -->|"REST: estado de cuenta"| M2
+    M2 -->|"REST: historial y viaje terminado"| M6["M6 · Viajes"]
 ```
 
-Hay dos formas de comunicarse:
+Todo se comunica por **REST**: alguien pregunta y el otro responde en el momento. Lo que intercambiamos está fijado en el [contrato común de M2](contratos/m2_clientes/openapi.yml), acordado con el Grupo 17:
 
-- **Síncrona (REST), línea llena:** alguien pregunta y M2 responde en el momento. Ejemplo: antes de asignar un conductor, **M5 (Despacho)** necesita saber si el pasajero pidió un vehículo con accesibilidad.
-- **Asíncrona (eventos), línea punteada:** **M6** avisa *"terminó un viaje"* y sigue con lo suyo, sin esperar respuesta. Si M2 justo está caído, el mensaje queda guardado en la cola de RabbitMQ y lo procesamos cuando volvemos. Nadie se queda esperando a nadie.
+- **El front** usa casi todo: perfil, direcciones, preferencias, historial y calificaciones.
+- **M5 (Despacho) y M9 (Reservas)** solo consultan el **estado de cuenta**, para saber si el cliente está habilitado antes de aceptar una solicitud o una reserva (RF-9.3). Usan un token con rol `SERVICIO`.
+- **M2 le pregunta a M6 (Viajes)** el historial del cliente y si un viaje terminó antes de aceptar una calificación. Nunca lee la base de M6 (RNF-05). Si M6 no contesta, M2 espera 2 segundos, reintenta una vez y, si sigue sin respuesta, devuelve `503`.
 
-Además, cada pedido que llega trae un **token de Keycloak** que dice quién es el usuario y qué rol tiene (`Cliente`, `Conductor` u `Operador`). Así sabemos, por ejemplo, que solo un operador puede bloquear una cuenta.
+Por ahora el contrato no tiene eventos asíncronos: si más adelante el consorcio acuerda alguno (por ejemplo, "terminó un viaje"), se agregan con RabbitMQ.
+
+Además, cada pedido que llega trae un **token de Keycloak** que dice quién es el usuario y qué rol tiene (`CLIENTE`, `CONDUCTOR`, `OPERADOR` o `SERVICIO`, escritos así, en mayúsculas, como dice el contrato). Así sabemos, por ejemplo, que solo un operador puede bloquear una cuenta.
 
 ---
 
@@ -59,16 +62,13 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 
 | Herramienta | Para qué la usamos | ¿Por qué esta? |
 |---|---|---|
-| **Python 3.12 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
-| **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un mail mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
-| **MySQL** | Perfil y estado de cuenta | Datos con estructura fija y operaciones críticas (como bloquear una cuenta) que tienen que quedar consistentes. Una base relacional con transacciones es lo ideal. |
-| **MongoDB** | Direcciones y preferencias | Un cliente puede tener 0 o 10 direcciones y preferencias distintas a las de otro. Un documento JSON flexible se adapta mejor que una tabla rígida. |
-| **RabbitMQ** | Recibir eventos de otros módulos (ej. `ViajeFinalizado`) | Desacopla: los módulos no necesitan estar todos prendidos al mismo tiempo para comunicarse. |
-| **Redis** | Caché de perfiles | M5 y M9 consultan perfiles todo el tiempo. Tenerlos en memoria evita ir a la base en cada pedido y las respuestas salen más rápido. |
-| **Keycloak** | Login y roles | Es el servidor de identidad compartido por toda la plataforma (configurado en [keycloak/](keycloak/)). No reinventamos la autenticación: solo validamos el token. |
+| **Python 3.13 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
+| **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un teléfono mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
+| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias y, más adelante, bloqueos y calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
+| **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
+| **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
+| **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
 | **Docker + docker-compose** | Levantar todo con un comando | Todos corremos exactamente las mismas versiones. Generamos imágenes versionadas (formato estándar OCI), así "en mi máquina anda" deja de ser excusa. |
-
-> 💡 Usar dos bases de datos distintas tiene nombre: **persistencia políglota**. La idea es simple: usar la herramienta adecuada para cada tipo de dato, en vez de meter todo a la fuerza en una sola.
 
 ### 12-Factor App, en dos patadas
 
@@ -84,26 +84,24 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 
 **Hecho**
 
+- [x] Contrato OpenAPI común de M2, acordado con el Grupo 17 ([`contratos/m2_clientes/openapi.yml`](contratos/m2_clientes/openapi.yml); publicado en la cátedra con FRRe-DS/2026-TPI#5) (RNF-03)
 - [x] API base con FastAPI y documentación Swagger
-- [x] CRUD de clientes en MongoDB: alta, listado, consulta, modificación y baja, con direcciones y preferencias (RF-2.1, base de RF-2.2 / RF-2.3)
-- [x] Validación de datos con Pydantic (incluye formato de email)
-- [x] Validación del token de Keycloak en todos los endpoints
-- [x] Reglas de propiedad: cada usuario solo ve, modifica o elimina su propio perfil (`403` si no es suyo)
-- [x] CORS habilitado para el front (orígenes configurables con `CORS_ORIGINS`)
-- [x] Front en React + Mantine con login de Keycloak para crear, editar y eliminar el perfil
+- [x] **Etapa 1 del contrato:** perfil del cliente (alta, consulta y modificación parcial) con el `sub` del token como `clienteId` (RF-2.1)
+- [x] Roles por operación (`CLIENTE`, `OPERADOR`) y regla de propiedad: un cliente solo ve y modifica su propio perfil (`403` si no es suyo)
+- [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
+- [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
+- [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
+- [x] Pruebas automáticas (RNF-07), 153 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos)
+- [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
+- [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
 
 **Pendiente**
 
-- [ ] Contrato OpenAPI de M2 en el repo de la consigna (`contratos/m2_clientes/openapi.yml`) (RNF-03)
-- [ ] Pasar el resto de la configuración a variables de entorno (`.env`): URL de MongoDB y de Keycloak (RNF-06)
-- [ ] Estado de cuenta y bloqueos administrativos, con permisos por rol Operador (RF-2.6)
-- [ ] Preferencias de tipo de vehículo, comunicación y accesibilidad (RF-2.3)
-- [ ] Calificación del conductor sin duplicados por viaje (RF-2.5)
-- [ ] Historial de viajes obtenido desde M6 (RF-2.4)
-- [ ] Unicidad de email y de usuario de Keycloak por perfil
-- [ ] Pruebas unitarias y de integración (RNF-07)
+- [ ] Etapa 3: estado de cuenta y bloqueos administrativos, con rol `SERVICIO` para M5 y M9 (RF-2.6)
+- [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
+- [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
 - [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
-- [ ] Caché de perfiles con Redis y eventos con RabbitMQ (TP2)
+- [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
 
 ---
 
@@ -163,7 +161,15 @@ Entrar a http://localhost:8080 → **Administration Console** (`admin` / `ds2026
 
 Después se pueden revisar en *Clients → m2-frontend → Settings → Access settings*.
 
-**b) Contraseña del usuario de prueba** — **Users → cliente-demo → Credentials → Reset password**: poner una contraseña (por ejemplo `ds2026`), **Temporary: Off** → Save. El usuario `cliente-demo` tiene rol *Cliente*.
+**b) Contraseña del usuario de prueba** — **Users → cliente-demo → Credentials → Reset password**: poner una contraseña (por ejemplo `ds2026`), **Temporary: Off** → Save.
+
+**b2) Roles del contrato** — la API compara los roles exactos, en mayúsculas, como dice el contrato. El realm trae `Cliente`, `Conductor` y `Operador`, que no sirven:
+
+1. **Realm roles → Create role**: crear `CLIENTE`, `CONDUCTOR`, `OPERADOR` y `SERVICIO` (uno por vez).
+2. **Users → cliente-demo → Role mapping → Assign role** → filtrar por *realm roles* → tildar `CLIENTE` → Assign.
+3. **Clients → grupo-01 → Service account roles → Assign role** → tildar `OPERADOR` → Assign (es la cuenta que se usa en el paso 6).
+
+Para que el token traiga el rol nuevo hay que cerrar sesión y volver a entrar.
 
 **c) (Opcional) Tokens más largos** — por defecto duran 5 minutos. *Realm settings → Tokens → Access Token Lifespan* = 1 hora → Save.
 
@@ -202,7 +208,7 @@ npm install        # solo la primera vez o si cambió package.json
 npm run dev        # arranca el front en http://localhost:5173
 ```
 
-Abrir **http://localhost:5173** → redirige al login de Keycloak → entrar con `cliente-demo` y la contraseña del paso 3b. Ahí se crea, edita o elimina el perfil. Más detalle en [frontend/README.md](frontend/README.md).
+Abrir **http://localhost:5173** → aparece la pantalla de bienvenida → **Ya tengo cuenta, ingresar** lleva al login de Keycloak → entrar con `cliente-demo` y la contraseña del paso 3b. Ahí se crea y se edita el perfil. Más detalle en [frontend/README.md](frontend/README.md).
 
 ### 6. (Opcional) Probar la API sin el front
 
@@ -212,7 +218,25 @@ Pedir un token con la cuenta de servicio del grupo (rol Operador) y copiarlo al 
 $r = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/realms/ds-2026-realm/protocol/openid-connect/token" -Body @{ grant_type="client_credentials"; client_id="grupo-01"; client_secret="68230b9a-f540-4e16-9f56-19180f303676" }; $r.access_token | Set-Clipboard
 ```
 
-En http://localhost:8000/docs → **Authorize** → pegar el token → probar los endpoints con **Try it out → Execute**. Si responde `"El token ha expirado"`, pedir otro y en Authorize hacer Logout y pegar el nuevo.
+En http://localhost:8000/docs → **Authorize** → pegar el token → probar los endpoints con **Try it out → Execute**. Si responde `401` con *"El token venció"*, pedir otro y en Authorize hacer Logout y pegar el nuevo.
+
+Esa cuenta tiene rol `OPERADOR` (paso 3b2): puede **consultar** cualquier perfil, pero no crearlo ni modificarlo, porque eso lo hace solo el `CLIENTE` dueño del perfil.
+
+### 7. Correr las pruebas de la API
+
+No necesitan Keycloak ni MongoDB: usan una base en memoria y tokens de prueba.
+
+```powershell
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+.\venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt   # solo la primera vez
+python -m pytest
+```
+
+Hay dos tipos:
+
+- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
+- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id` y reglas de los modelos.
 
 ### Para apagar todo
 
@@ -232,38 +256,32 @@ En http://localhost:8000/docs → **Authorize** → pegar el token → probar lo
 
 ### Endpoints disponibles hoy
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `POST` | `/api/v1/clientes` | Crea un cliente con sus direcciones y preferencias |
-| `GET` | `/api/v1/clientes` | Lista los clientes del usuario del token |
-| `GET` | `/api/v1/clientes/{id_mongo}` | Trae un cliente por su ID (`400` ID inválido, `403` no es tuyo, `404` no existe) |
-| `PUT` | `/api/v1/clientes/{id_mongo}` | Reemplaza los datos del cliente |
-| `DELETE` | `/api/v1/clientes/{id_mongo}` | Elimina el cliente |
+Siguen el contrato común [`contratos/m2_clientes/openapi.yml`](contratos/m2_clientes/openapi.yml). El `clienteId` es el `sub` del token del cliente.
 
-Todos requieren el encabezado `Authorization: Bearer <token>`.
+| Método | Ruta | Roles | Qué hace |
+|---|---|---|---|
+| `GET` | `/health` | sin token | `200` si la API y su base responden; si no, `503` |
+| `POST` | `/api/v1/clientes` | `CLIENTE` | Crea el perfil del usuario del token. Exige `Idempotency-Key`. `409` si ya tiene uno |
+| `GET` | `/api/v1/clientes/{clienteId}` | `CLIENTE` (el suyo), `OPERADOR` | Trae el perfil |
+| `PATCH` | `/api/v1/clientes/{clienteId}` | `CLIENTE` (el suyo) | Cambia solo los campos enviados |
+| `GET` | `/api/v1/clientes/{clienteId}/direcciones` | `CLIENTE` (las suyas), `OPERADOR` | Lista paginada (`page` desde 0, `size` hasta 100), más nuevas primero. Filtro opcional `tipo` |
+| `POST` | `/api/v1/clientes/{clienteId}/direcciones` | `CLIENTE` (el suyo) | Agrega una dirección (`tipo`, `texto` y opcionalmente `alias` y `coordenadas`). Exige `Idempotency-Key` |
+| `GET` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya), `OPERADOR` | Trae una dirección |
+| `PATCH` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Cambia solo los campos enviados |
+| `DELETE` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Elimina la dirección (`204`) |
+| `GET` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas), `OPERADOR` | Trae las preferencias; si nunca se guardaron, listas vacías |
+| `PUT` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas) | Reemplaza todas las preferencias |
 
-Ejemplo de cliente para crear con el `POST`:
+Todos menos `/health` requieren `Authorization: Bearer <token>`. Los errores vuelven en formato `application/problem+json`, y toda respuesta trae `X-Request-Id`.
+
+Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemplo un UUID cualquiera):
 
 ```json
 {
   "nombre": "Ana",
   "apellido": "Gómez",
-  "email": "ana.gomez@gmail.com",
-  "telefono": "3624123456",
-  "direcciones": [
-    {
-      "etiqueta": "Casa",
-      "calle": "Av. Sarmiento",
-      "numero": "1500",
-      "ciudad": "Resistencia",
-      "es_principal": true
-    }
-  ],
-  "preferencias": {
-    "viaje_silencioso": true,
-    "temperatura_aire": "Fría",
-    "musica": "Rock"
-  }
+  "telefono": "+5493624123456",
+  "fechaNacimiento": "2000-05-17"
 }
 ```
 
@@ -273,14 +291,21 @@ Ejemplo de cliente para crear con el `POST`:
 
 ```
 2026-01-TPI/
+├── contratos/m2_clientes/    # Contrato OpenAPI común de M2 (acordado con el Grupo 17)
 ├── keycloak/                 # Servidor de identidad (login y roles) + configuración del realm
 ├── frontend/                 # Front en React + Vite + Mantine (login con Keycloak)
 └── m2-clientes/              # Nuestro microservicio
-    ├── main.py               # Endpoints de la API
-    ├── models.py             # Cómo es un Cliente, una Dirección y las Preferencias
+    ├── main.py               # Arma la app: middleware, manejo de errores y rutas
+    ├── rutas/                # Endpoints, un archivo por recurso del contrato
+    ├── models.py             # Cómo es un Cliente (nombres y reglas del contrato)
+    ├── security.py           # Validación del token y de los roles
+    ├── errores.py            # Respuestas de error en formato problem+json
+    ├── middleware.py         # X-Request-Id, límite de 1 MiB y Content-Type
+    ├── config.py             # Configuración por variables de entorno (.env)
     ├── database.py           # Conexión a MongoDB
-    ├── security.py           # Validación del token de Keycloak
+    ├── tests/                # Pruebas automáticas (pytest)
     ├── requirements.txt      # Librerías de Python
+    ├── requirements-dev.txt  # Librerías para las pruebas
     └── docker-compose.yml    # MongoDB local
 ```
 

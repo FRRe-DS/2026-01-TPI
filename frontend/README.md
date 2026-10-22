@@ -1,6 +1,6 @@
 # Front de M2 · Clientes
 
-Página web para que un cliente inicie sesión con Keycloak y cree, vea, edite o elimine su perfil (datos, direcciones frecuentes y preferencias) usando la API de M2.
+Página web para que un cliente inicie sesión con Keycloak y cree, vea y edite su perfil usando la API de M2, según el contrato común (`contratos/m2_clientes/openapi.yml`). Las direcciones frecuentes y las preferencias se vuelven a agregar en la etapa 2.
 
 **Tecnologías:** React 19 + Vite (proyecto y servidor de desarrollo) + Mantine (componentes visuales) + keycloak-js (login).
 
@@ -30,7 +30,9 @@ npm install      # solo la primera vez, o cuando cambie package.json
 npm run dev
 ```
 
-Abrir http://localhost:5173: redirige al login de Keycloak y, al entrar, vuelve a la app.
+Abrir http://localhost:5173: si no hay sesión, muestra la pantalla de bienvenida con dos botones, **Crear cuenta** e **Ingresar**, que llevan a la pantalla de Keycloak. Al terminar, vuelve a la app ya con sesión.
+
+**Crear cuenta** necesita el registro activado en Keycloak: *Realm settings → Login → User registration*, y el rol `CLIENTE` en *Realm settings → User registration → Default roles* (si no, el usuario nuevo recibe 403 de la API).
 
 ## Estructura
 
@@ -40,10 +42,13 @@ frontend/
 ├── vite.config.js             # configuración de Vite (puerto 5173)
 ├── .env.example               # URLs configurables (RNF-06)
 └── src/
-    ├── main.jsx               # hace el login y arranca la app
+    ├── main.jsx               # se fija si hay sesión: muestra la bienvenida o la app
     ├── keycloak.js            # conexión con Keycloak
-    ├── api.js                 # llamadas a la API de M2 con el token
-    ├── App.jsx                # pantalla principal: carga, crea, edita, elimina
+    ├── api.js                 # llamadas a la API de M2 con el token (rutas del contrato)
+    ├── App.jsx                # pantalla principal: carga el perfil por el sub del token, lo crea o lo edita (PATCH)
     └── components/
-        └── ClienteForm.jsx    # formulario de perfil, direcciones y preferencias
+        ├── Bienvenida.jsx     # pantalla de inicio sin sesión: Crear cuenta / Ingresar
+        ├── ClienteForm.jsx    # formulario de datos personales
+        ├── DireccionesCard.jsx  # tarjeta de direcciones frecuentes
+        └── PreferenciasCard.jsx # tarjeta de preferencias de viaje
 ```
