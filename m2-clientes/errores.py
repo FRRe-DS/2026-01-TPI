@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match
 
 import config
 
@@ -79,15 +80,20 @@ async def manejar_http(request: Request, exc: StarletteHTTPException):
     return problema(request, exc.status_code, detalle, headers=encabezados)
 
 
+_METODOS_HTTP = ("GET", "POST", "PUT", "PATCH", "DELETE")
+
+
 def _metodos_de_la_ruta(request: Request) -> str:
-    """Todos los métodos que admite la ruta pedida (Starlette solo lista los de la primera que coincide)."""
-    metodos = set()
-    for ruta in request.app.router.routes:
-        regex = getattr(ruta, "path_regex", None)
-        if regex and regex.match(request.url.path):
-            metodos.update(getattr(ruta, "methods", None) or [])
-    metodos.discard("HEAD")
-    return ", ".join(sorted(metodos))
+    """Todos los métodos que admite la ruta pedida (Starlette solo lista los de la primera que coincide).
+
+    Se prueba cada método contra las rutas de la app, así funciona también con los routers incluidos.
+    """
+    admitidos = []
+    for metodo in _METODOS_HTTP:
+        scope = {**request.scope, "method": metodo}
+        if any(ruta.matches(scope)[0] == Match.FULL for ruta in request.app.router.routes):
+            admitidos.append(metodo)
+    return ", ".join(admitidos)
 
 
 async def manejar_validacion(request: Request, exc: RequestValidationError):

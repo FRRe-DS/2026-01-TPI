@@ -3,29 +3,10 @@ import uuid
 
 import pytest
 
-from conftest import auth, token
+from conftest import PERFIL as NUEVO
+from conftest import auth, es_problema, token
+from conftest import crear_perfil as crear
 from contrato import respuestas_declaradas, validar
-
-NUEVO = {"nombre": "Ana", "apellido": "Gómez", "telefono": "+5493624000000"}
-
-
-def crear(cliente_http, sub, cuerpo=None, **extra):
-    return cliente_http.post(
-        "/api/v1/clientes",
-        json=cuerpo if cuerpo is not None else NUEVO,
-        headers=auth(["CLIENTE"], sub, **{"Idempotency-Key": str(uuid.uuid4())}, **extra),
-    )
-
-
-def es_problema(r, status, generico=True):
-    assert r.status_code == status, r.text
-    assert r.headers["content-type"].startswith("application/problem+json")
-    cuerpo = r.json()
-    validar("Problema", cuerpo)
-    if generico:
-        validar("ProblemaGenerico", cuerpo)
-    assert r.headers.get("X-Request-Id")
-    return cuerpo
 
 
 # ------------------------------------------------------------ Salud
@@ -282,3 +263,11 @@ def test_error_inesperado_da_500_sin_detalles(cliente_http, monkeypatch):
 ])
 def test_codigos_usados_estan_en_el_contrato(operacion, codigos):
     assert codigos <= respuestas_declaradas(operacion)
+
+
+def test_lo_que_devuelve_el_post_es_igual_al_get(cliente_http):
+    # MongoDB guarda milisegundos: las fechas del POST no pueden diferir de las que lee el GET
+    sub = str(uuid.uuid4())
+    creado = crear(cliente_http, sub).json()
+    leido = cliente_http.get(f"/api/v1/clientes/{sub}", headers=auth(["CLIENTE"], sub)).json()
+    assert creado == leido

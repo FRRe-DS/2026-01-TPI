@@ -60,3 +60,31 @@ export const crearCliente = (cliente) =>
 // PATCH: se mandan solo los campos que cambiaron
 export const actualizarCliente = (clienteId, cambios) =>
   pedir('PATCH', `/api/v1/clientes/${clienteId}`, cambios)
+
+// ---------------------------------------------------------- Direcciones frecuentes (RF-2.2)
+
+// El listado viene paginado: { items, page, size, totalElementos, totalPaginas }. page empieza en 0.
+export const listarDirecciones = (clienteId, { page = 0, size = 20, tipo } = {}) => {
+  const params = new URLSearchParams({ page, size })
+  if (tipo) params.set('tipo', tipo)
+  return pedir('GET', `/api/v1/clientes/${clienteId}/direcciones?${params}`)
+}
+
+export const crearDireccion = (clienteId, direccion) =>
+  pedir('POST', `/api/v1/clientes/${clienteId}/direcciones`, direccion,
+    { 'Idempotency-Key': crypto.randomUUID() })
+
+export const actualizarDireccion = (clienteId, direccionId, cambios) =>
+  pedir('PATCH', `/api/v1/clientes/${clienteId}/direcciones/${direccionId}`, cambios)
+
+export const eliminarDireccion = (clienteId, direccionId) =>
+  pedir('DELETE', `/api/v1/clientes/${clienteId}/direcciones/${direccionId}`)
+
+// ---------------------------------------------------------- Preferencias (RF-2.3)
+
+export const obtenerPreferencias = (clienteId) =>
+  pedir('GET', `/api/v1/clientes/${clienteId}/preferencias`)
+
+// PUT: reemplaza todas las preferencias
+export const guardarPreferencias = (clienteId, preferencias) =>
+  pedir('PUT', `/api/v1/clientes/${clienteId}/preferencias`, preferencias)

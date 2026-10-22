@@ -13,7 +13,8 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 | Ruta | Qué es |
 |---|---|
 | `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del publicado en la cátedra (`FRRe-DS/2026-TPI`, PR #5). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
-| `m2-clientes/main.py` | Endpoints. Hoy cubre la etapa 1: `/health` y el perfil (POST, GET, PATCH). |
+| `m2-clientes/main.py` | Arma la app: middleware, manejadores de errores y routers. |
+| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. Hoy cubre las etapas 1 y 2. |
 | `m2-clientes/security.py` | Validación del token (JWKS de M1), lectura de roles, `requiere_roles` y `verificar_dueno`. |
 | `m2-clientes/errores.py` | Errores en formato `application/problem+json` y todos los manejadores de excepciones. |
 | `m2-clientes/middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`). |
@@ -57,21 +58,22 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 - **Idioma:** el código (variables, funciones, archivos), los comentarios, los mensajes de error y los textos del front van en **español**. Los mensajes para el usuario se escriben con voseo ("Solo podés operar sobre tu propio perfil").
 - **Nombres:** funciones y variables de Python en `snake_case`. Los campos JSON van en `camelCase`, exactamente como los nombra el contrato (`clienteId`, `fechaNacimiento`, `creadoEn`). Los modelos Pydantic llevan el mismo nombre que el esquema del contrato (`ClienteNuevo`, `ClienteCambios`, `Cliente`).
-- **Endpoints:** seguí el patrón de `m2-clientes/main.py`:
+- **Endpoints:** seguí el patrón de `m2-clientes/rutas/direcciones.py` (un `APIRouter` por recurso, registrado en `main.py`):
   - el decorador con `operation_id` igual al `operationId` del contrato;
   - la dependencia `requiere_roles(...)` con los roles que declara el `security` de esa operación;
   - `verificar_dueno` cuando la ruta lleva `{clienteId}`;
   - `ErrorDominio` para los errores de negocio;
-  - `_json_cliente` (con `exclude_none`) para armar la respuesta.
+  - `a_json` (con `exclude_none`) para armar la respuesta y `paginar` para los listados;
+  - las fechas con `ahora()`, que recorta a milisegundos como MongoDB.
 - **Modelos:** `ConfigDict(extra="forbid")` en todos los cuerpos de entrada (equivale a `additionalProperties: false`). En los PATCH, los `null` se rechazan.
-- **Pruebas:** seguí el patrón de `m2-clientes/tests/test_perfil.py`: `auth([...roles], sub)` para el token, `es_problema(r, status)` para los errores y `validar("Esquema", cuerpo)` para chequear contra el contrato.
+- **Pruebas:** un archivo por recurso, con el patrón de `m2-clientes/tests/test_direcciones.py`: `auth([...roles], sub)` para el token, `crear_perfil` y `es_problema(r, status)` de `conftest.py`, y `validar("Esquema", cuerpo)` para chequear contra el contrato. Cada archivo termina con su `test_codigos_usados_estan_en_el_contrato`. Si agregás una colección, parcheala en el fixture `base_en_memoria` de `conftest.py`.
 - **Front:** toda llamada nueva va en `frontend/src/api.js`. Los errores llegan como `ErrorApi`, que trae `status`.
 - **Comentarios:** que expliquen el porqué, con referencia al RF, al RNF o al contrato cuando aplique.
 
 ## Reglas de dominio / trampas conocidas
 
 - **El contrato es compartido con el Grupo 17.** No se agregan, renombran ni sacan rutas, campos, roles ni códigos de respuesta por cuenta propia. Cualquier cambio se acuerda primero con ellos (en un PR de `FRRe-DS/2026-17-TPI`) y después se publica en la cátedra. Si una operación necesita algo que el contrato no tiene, parar y avisar.
-- **Solo se devuelven los códigos que el contrato declara para cada operación.** Hay un test que lo verifica; al agregar una operación, sumala a `test_codigos_usados_estan_en_el_contrato`.
+- **Solo se devuelven los códigos que el contrato declara para cada operación.** Hay un test que lo verifica; al agregar una operación, sumala al `test_codigos_usados_estan_en_el_contrato` de su archivo de pruebas.
 - **`clienteId` = `sub` del token, pero solo en tokens de CLIENTE.** En los de SERVICIO, el `sub` es el nombre del módulo (por ejemplo `m9-reservas`). En MongoDB, el `clienteId` es el `_id` del perfil.
 - **Roles exactos, en mayúsculas:** `CLIENTE`, `CONDUCTOR`, `OPERADOR`, `SERVICIO`. `SERVICIO` solo se admite en `obtenerEstadoCuenta` (lo usan M5 y M9); en cualquier otra operación da `403`. El realm de Keycloak trae `Cliente`, `Conductor` y `Operador`, que **no** sirven: hay que crear los roles en mayúsculas a mano (paso 3b2 del README).
 - **Errores:**
@@ -82,6 +84,9 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 - **Un `X-Request-Id` inválido nunca da 400:** se reemplaza por uno generado. Toda respuesta lo devuelve, incluso un `500`.
 - **`DuplicateKeyError` es un `PyMongoError`.** Si no se captura en el endpoint, el manejador global lo convierte en `503`.
 - **MongoDB no guarda `date`:** `fechaNacimiento` se guarda como texto ISO (`AAAA-MM-DD`). El cliente de Mongo es `tz_aware=True`, así que todas las fechas y horas van en UTC.
+- **MongoDB guarda milisegundos, no microsegundos.** Usá siempre `ahora()` de `rutas/comunes.py`; si no, lo que devuelve un `POST` no coincide con el `GET` siguiente.
+- **Desde FastAPI 0.143, `include_router` envuelve las rutas** (`app.router.routes` ya no tiene `path_regex` ni `methods`). Para saber si una ruta existe, usá `ruta.matches(scope)`, como en `middleware.py` y en el `Allow` del 405 en `errores.py`.
+- **Una dirección se busca siempre por `_id` y `clienteId`:** la de otro cliente es `404` en esa ruta.
 - **Datos de otros módulos, solo por su API** (RNF-05): el historial y la validación de viajes salen de la API de M6, nunca de su base, y no se copian a la nuestra. Para hablar con otros módulos: 2 s por intento, un reintento solo en los GET, y si no hay respuesta, `503` con el `type` de dependencia. La espera máxima publicada en el contrato es 4,2 s; cambiarla es cambiar el contrato. M6 todavía no tiene contrato, así que para probar hay que usar un mock.
 - **Calificaciones:** el conductor sale de M6, no del cuerpo. Hay una sola por (cliente, viaje), garantizada en la base con índice único; un segundo intento da `409`.
 - **Bloqueos:** nunca se borran. Levantar uno es un `PATCH` con motivo, que registra quién y cuándo lo levantó; si ya estaba levantado, `409`. El `estado` del cliente (`ACTIVO` o `BLOQUEADO`) se calcula a partir de los bloqueos vigentes; hasta la etapa 3 es siempre `ACTIVO`.
@@ -94,7 +99,7 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 - **El trabajo sigue el plan por etapas,** y cada etapa va en su propia rama `feature/...` con su propio PR hacia `main`:
   1. perfil (hecha);
-  2. direcciones y preferencias;
+  2. direcciones y preferencias (hecha);
   3. estado de cuenta y bloqueos;
   4. calificaciones e historial (M6);
   5. idempotencia.
