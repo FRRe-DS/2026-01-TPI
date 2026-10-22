@@ -97,7 +97,8 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 ## Forma de trabajar
 
-- **El trabajo sigue el plan por etapas,** y cada etapa va en su propia rama `feature/...` con su propio PR hacia `main`:
+- **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. Cuando estén las 5 etapas, se hace un único PR de `desarrollo-m2` a `main`. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados.
+- **Etapas:**
   1. perfil (hecha);
   2. direcciones y preferencias (hecha);
   3. estado de cuenta y bloqueos;

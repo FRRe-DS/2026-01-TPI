@@ -3,8 +3,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
-- Etapa 1 (perfil, `/health`, roles, problem+json, `X-Request-Id`, `.env`) + `AGENTS.md` y `MEMORY.md`: rama `feature/contrato-m2-etapa1`, subida a GitHub y probada en real el 21/10.
-- Etapa 2 (direcciones y preferencias, RF-2.2 y RF-2.3): rama `feature/contrato-m2-etapa2`, creada desde la de la etapa 1. 105 tests OK; probada en real el 21/10 (Keycloak, MongoDB y front): todo OK. Sin commitear todavía.
+- Ramas: las etapas se integran en `desarrollo-m2` (sale de `main`); al terminar las 5 etapas, un único PR a `main`. Se mergea con merge commit.
+- Etapa 1 (perfil, `/health`, roles, problem+json, `X-Request-Id`, `.env`) + `AGENTS.md` y `MEMORY.md`: PR #2, mergeado en `desarrollo-m2`. Probada en real el 21/10.
+- Etapa 2 (direcciones y preferencias, RF-2.2 y RF-2.3): rama `feature/contrato-m2-etapa2`, PR abierto hacia `desarrollo-m2`. 105 tests OK; probada en real el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR): todo OK.
 - Pendiente de otros: M5 (grupos 4 y 13) no confirmó si le alcanza con `obtenerEstadoCuenta`; formato del token de M1 abierto en el issue #9 de `2026-17-TPI`; M6 sin contrato.
 - M9 firma sus tokens de SERVICIO con HS256 y una clave compartida mientras M1 sea simulado (issue #9, 20/10). Hoy solo aceptamos RS256 por JWKS: hay que soportarlo por configuración antes o durante la etapa 3.
 
@@ -31,10 +32,10 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **`main.py` dividido en `rutas/`** (un archivo por recurso): crece con cada etapa.
 - **Listado de direcciones: más nuevas primero** (el contrato no fija orden). Una dirección de otro cliente da 404.
 - **No tocamos el realm** (`keycloak/`): es de Matías; los pasos manuales están en el README.
-- **Trabajo por etapas,** cada una en su rama `feature/...` con su PR; nunca en `main`.
+- **Trabajo por etapas en `desarrollo-m2`:** el usuario prefiere integrar todo ahí y mergear a `main` una sola vez al final.
 
 ## Próximos pasos
-1. PR de la etapa 1 hacia `main`; commitear la etapa 2, subirla y abrir su PR.
+1. Mergear el PR de la etapa 2 en `desarrollo-m2`.
 2. Etapa 3: estado de cuenta y bloqueos (SERVICIO solo en `obtenerEstadoCuenta`, `estado` calculado, aceptar tokens HS256 de M9).
 3. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
 4. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
