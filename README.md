@@ -91,7 +91,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
-- [x] Pruebas automáticas de la API, que además verifican las respuestas contra el contrato (RNF-07)
+- [x] Pruebas automáticas (RNF-07), 153 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
 
@@ -233,7 +233,10 @@ pip install -r requirements-dev.txt   # solo la primera vez
 python -m pytest
 ```
 
-Además de probar cada caso, verifican que las respuestas cumplan los esquemas del contrato.
+Hay dos tipos:
+
+- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
+- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id` y reglas de los modelos.
 
 ### Para apagar todo
 

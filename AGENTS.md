@@ -66,7 +66,8 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
   - `a_json` (con `exclude_none`) para armar la respuesta y `paginar` para los listados;
   - las fechas con `ahora()`, que recorta a milisegundos como MongoDB.
 - **Modelos:** `ConfigDict(extra="forbid")` en todos los cuerpos de entrada (equivale a `additionalProperties: false`). En los PATCH, los `null` se rechazan.
-- **Pruebas:** un archivo por recurso, con el patrón de `m2-clientes/tests/test_direcciones.py`: `auth([...roles], sub)` para el token, `crear_perfil` y `es_problema(r, status)` de `conftest.py`, y `validar("Esquema", cuerpo)` para chequear contra el contrato. Cada archivo termina con su `test_codigos_usados_estan_en_el_contrato`. Si agregás una colección, parcheala en el fixture `base_en_memoria` de `conftest.py`.
+- **Pruebas unitarias:** la lógica propia que se puede probar sin HTTP (roles, dueño, paginación, fechas, reglas de los modelos) va en `m2-clientes/tests/test_unitarias.py`. No repitas ahí lo que ya cubren las pruebas de API.
+- **Pruebas de API:** un archivo por recurso, con el patrón de `m2-clientes/tests/test_direcciones.py`: `auth([...roles], sub)` para el token, `crear_perfil` y `es_problema(r, status)` de `conftest.py`, y `validar("Esquema", cuerpo)` para chequear contra el contrato. Cada archivo termina con su `test_codigos_usados_estan_en_el_contrato`. Si agregás una colección, parcheala en el fixture `base_en_memoria` de `conftest.py`.
 - **Front:** toda llamada nueva va en `frontend/src/api.js`. Los errores llegan como `ErrorApi`, que trae `status`.
 - **Comentarios:** que expliquen el porqué, con referencia al RF, al RNF o al contrato cuando aplique.
 

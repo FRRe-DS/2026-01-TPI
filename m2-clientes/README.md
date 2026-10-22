@@ -55,7 +55,7 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 | `middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`) |
 | `config.py` | Configuración por variables de entorno |
 | `database.py` | Conexión a MongoDB (el `_id` de cada perfil es el `clienteId`) |
-| `tests/` | Pruebas automáticas; también validan las respuestas contra el contrato |
+| `tests/` | Pruebas automáticas: de API (validan cada respuesta contra el contrato) y unitarias (`test_unitarias.py`, funciones sueltas sin HTTP) |
 | `requirements.txt` | Librerías de Python (usar Python 3.12 o 3.13) |
 | `requirements-dev.txt` | Librerías para las pruebas |
 | `docker-compose.yml` | MongoDB local |
