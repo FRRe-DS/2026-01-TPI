@@ -1,21 +1,21 @@
 // Pantalla principal: muestra el perfil del cliente logueado.
-// - Si todavía no tiene perfil, muestra el formulario para crearlo (POST).
-// - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PUT) o eliminarlo (DELETE).
+// - Si todavía no tiene perfil (la API responde 404), muestra el formulario para crearlo (POST).
+// - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PATCH).
+// El contrato no tiene baja del perfil, así que no hay botón para eliminarlo.
 import { useEffect, useState } from 'react'
 import {
-  AppShell, Alert, Button, Container, Group, Loader, Modal, Stack, Text, Title,
+  AppShell, Alert, Badge, Button, Container, Group, Loader, Stack, Text, Title,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 
 import keycloak from './keycloak'
-import { listarClientes, crearCliente, actualizarCliente, eliminarCliente } from './api'
+import { miClienteId, obtenerCliente, crearCliente, actualizarCliente } from './api'
 import ClienteForm from './components/ClienteForm'
 
 export default function App() {
   const [cliente, setCliente] = useState(null) // el perfil guardado, o null si no hay
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [confirmarBorrado, setConfirmarBorrado] = useState(false)
 
   const usuario = keycloak.tokenParsed?.preferred_username
 
@@ -23,10 +23,10 @@ export default function App() {
     setCargando(true)
     setError(null)
     try {
-      const lista = await listarClientes() // la API devuelve solo los clientes de este usuario
-      setCliente(lista[0] ?? null)
+      setCliente(await obtenerCliente(miClienteId()))
     } catch (e) {
-      setError(e.message)
+      if (e.status === 404) setCliente(null) // todavía no creó su perfil
+      else setError(e.message)
     } finally {
       setCargando(false)
     }
@@ -39,23 +39,16 @@ export default function App() {
 
   async function guardar(datos) {
     if (cliente) {
-      await actualizarCliente(cliente._id, datos)
+      const cambios = soloCambios(cliente, datos)
+      if (Object.keys(cambios).length === 0) {
+        notifications.show({ message: 'No hay cambios para guardar' })
+        return
+      }
+      setCliente(await actualizarCliente(cliente.clienteId, cambios))
       notifications.show({ color: 'teal', message: 'Perfil actualizado' })
     } else {
-      await crearCliente(datos)
+      setCliente(await crearCliente(datos))
       notifications.show({ color: 'teal', message: 'Perfil creado' })
-    }
-    await cargarPerfil()
-  }
-
-  async function borrar() {
-    try {
-      await eliminarCliente(cliente._id)
-      notifications.show({ message: 'Perfil eliminado' })
-      setConfirmarBorrado(false)
-      await cargarPerfil()
-    } catch (e) {
-      notifications.show({ color: 'red', title: 'No se pudo eliminar', message: e.message })
     }
   }
 
@@ -97,40 +90,41 @@ export default function App() {
           {!cargando && !error && (
             <Stack>
               <div>
-                <Title order={2}>{cliente ? 'Mi perfil' : 'Creá tu perfil'}</Title>
+                <Group gap="sm">
+                  <Title order={2}>{cliente ? 'Mi perfil' : 'Creá tu perfil'}</Title>
+                  {cliente && (
+                    <Badge color={cliente.estado === 'ACTIVO' ? 'teal' : 'red'} variant="light">
+                      {cliente.estado === 'ACTIVO' ? 'Cuenta activa' : 'Cuenta bloqueada'}
+                    </Badge>
+                  )}
+                </Group>
                 <Text c="dimmed">
                   {cliente
-                    ? 'Revisá y actualizá tus datos, direcciones y preferencias de viaje.'
+                    ? 'Revisá y actualizá tus datos personales.'
                     : 'Todavía no tenés un perfil de cliente. Completá tus datos para empezar a viajar.'}
                 </Text>
               </div>
 
               <ClienteForm
-                key={cliente?._id ?? 'nuevo'}
+                key={cliente?.actualizadoEn ?? 'nuevo'}
                 inicial={cliente}
                 textoBoton={cliente ? 'Guardar cambios' : 'Crear perfil'}
                 onGuardar={guardar}
               />
-
-              {cliente && (
-                <Group justify="flex-end">
-                  <Button variant="subtle" color="red" onClick={() => setConfirmarBorrado(true)}>
-                    Eliminar mi perfil
-                  </Button>
-                </Group>
-              )}
             </Stack>
           )}
         </Container>
       </AppShell.Main>
-
-      <Modal opened={confirmarBorrado} onClose={() => setConfirmarBorrado(false)} title="¿Eliminar tu perfil?">
-        <Text size="sm">Se borran tus datos, direcciones y preferencias. Esta acción no se puede deshacer.</Text>
-        <Group justify="flex-end" mt="lg">
-          <Button variant="default" onClick={() => setConfirmarBorrado(false)}>Cancelar</Button>
-          <Button color="red" onClick={borrar}>Eliminar</Button>
-        </Group>
-      </Modal>
     </AppShell>
   )
+}
+
+// Para el PATCH: solo los campos que cambiaron respecto del perfil guardado
+function soloCambios(guardado, datos) {
+  const cambios = {}
+  for (const [campo, valor] of Object.entries(datos)) {
+    // undefined = campo vacío: el contrato no permite borrar un dato con PATCH, así que no se manda
+    if (valor !== undefined && guardado[campo] !== valor) cambios[campo] = valor
+  }
+  return cambios
 }
