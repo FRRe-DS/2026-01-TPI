@@ -15,7 +15,7 @@
 | **Brandt, Carina Noemí** | 24672 |
 | **Sonza, Matias Javier** | 26573 |
 | **Paluch Ruberto, Julián** | 27229 |
-| *[Nombre del Integrante 3]* | *[Legajo 3]* |
+| **Nuñez, Lucas Emanuel** | 23959 |
 
 ---
 
@@ -29,10 +29,10 @@ A nosotros nos toca **M2: Clientes**. Pensalo como la **"ficha del pasajero"**: 
 
 | Requisito | Qué significa en criollo |
 |---|---|
-| **RF-2.1 / RF-2.6** — Perfil y estado de cuenta | Alta, consulta y modificación de los datos del cliente (nombre, mail, teléfono). También saber si la cuenta está activa o bloqueada: un operador puede bloquear una cuenta, por ejemplo ante un reclamo. |
-| **RF-2.2 / RF-2.3** — Direcciones y preferencias | Guardar lugares frecuentes ("Casa", "Facu", "Trabajo") para no escribirlos cada vez, y cómo le gusta viajar: tipo de vehículo, necesidades de accesibilidad, viaje silencioso, etc. |
-| **RF-2.4** — Historial de viajes | Un resumen de los viajes que hizo el cliente. No lo calculamos nosotros: nos enteramos cuando otro módulo nos avisa que un viaje terminó. |
-| **RF-2.5** — Calificar al conductor | El cliente puntúa al conductor. Si por un corte de internet la app manda la misma calificación dos veces, se guarda **una sola vez**. A eso se le dice ser **idempotente**. |
+| **RF-2.1 / RF-2.6** — Perfil y estado de cuenta | Alta, consulta y modificación de los datos del cliente (nombre, apellido, teléfono y fecha de nacimiento; el mail queda en M1, el módulo de identidad). También saber si la cuenta está activa o bloqueada: un operador puede bloquear una cuenta, por ejemplo ante un reclamo, y levantar el bloqueo después. Los bloqueos nunca se borran: queda el historial. |
+| **RF-2.2 / RF-2.3** — Direcciones y preferencias | Guardar lugares frecuentes ("Casa", "Facu", "Trabajo"), favoritos o recientes, para no escribirlos cada vez, y cómo le gusta viajar: tipo de vehículo (auto o moto), por qué canales recibir avisos (email, SMS, notificaciones) y necesidades de accesibilidad. |
+| **RF-2.4** — Historial de viajes | Un resumen de los viajes que hizo el cliente. No lo guardamos nosotros: cada vez que el cliente lo pide, M2 se lo pregunta a M6 (el módulo de viajes) por su API. Si M6 no contesta a tiempo, M2 responde con un error claro en vez de quedarse esperando. |
+| **RF-2.5** — Calificar al conductor | Después de un viaje terminado, el cliente puntúa al conductor (de 1 a 5). Se permite **una sola calificación por viaje**: un segundo intento se rechaza. Y si por un corte de internet la app manda el mismo pedido dos veces, no se duplica: a eso se le dice ser **idempotente**. |
 
 ---
 
@@ -40,16 +40,19 @@ A nosotros nos toca **M2: Clientes**. Pensalo como la **"ficha del pasajero"**: 
 
 ```mermaid
 flowchart LR
-    FRONT["App / Front"] -->|"REST"| M2["M2 · Clientes"]
-    M5["M5 · Despacho"] -->|"REST: perfil y preferencias"| M2
-    M9["M9 · Reservas"] -->|"REST: perfil"| M2
-    M6["M6"] -.->|"evento ViajeFinalizado (RabbitMQ)"| M2
+    FRONT["App / Front"] -->|"REST: perfil, direcciones, preferencias…"| M2["M2 · Clientes"]
+    M5["M5 · Despacho"] -->|"REST: estado de cuenta"| M2
+    M9["M9 · Reservas"] -->|"REST: estado de cuenta"| M2
+    M2 -->|"REST: historial y viaje terminado"| M6["M6 · Viajes"]
 ```
 
-Hay dos formas de comunicarse:
+Todo se comunica por **REST**: alguien pregunta y el otro responde en el momento. Lo que intercambiamos está fijado en el [contrato común de M2](contratos/m2_clientes/openapi.yml), acordado con el Grupo 17:
 
-- **Síncrona (REST), línea llena:** alguien pregunta y M2 responde en el momento. Ejemplo: antes de asignar un conductor, **M5 (Despacho)** necesita saber si el pasajero pidió un vehículo con accesibilidad.
-- **Asíncrona (eventos), línea punteada:** **M6** avisa *"terminó un viaje"* y sigue con lo suyo, sin esperar respuesta. Si M2 justo está caído, el mensaje queda guardado en la cola de RabbitMQ y lo procesamos cuando volvemos. Nadie se queda esperando a nadie.
+- **El front** usa casi todo: perfil, direcciones, preferencias, historial y calificaciones.
+- **M5 (Despacho) y M9 (Reservas)** solo consultan el **estado de cuenta**, para saber si el cliente está habilitado antes de aceptar una solicitud o una reserva (RF-9.3). Usan un token con rol `SERVICIO`.
+- **M2 le pregunta a M6 (Viajes)** el historial del cliente y si un viaje terminó antes de aceptar una calificación. Nunca lee la base de M6 (RNF-05). Si M6 no contesta, M2 espera 2 segundos, reintenta una vez y, si sigue sin respuesta, devuelve `503`.
+
+Por ahora el contrato no tiene eventos asíncronos: si más adelante el consorcio acuerda alguno (por ejemplo, "terminó un viaje"), se agregan con RabbitMQ.
 
 Además, cada pedido que llega trae un **token de Keycloak** que dice quién es el usuario y qué rol tiene (`CLIENTE`, `CONDUCTOR`, `OPERADOR` o `SERVICIO`, escritos así, en mayúsculas, como dice el contrato). Así sabemos, por ejemplo, que solo un operador puede bloquear una cuenta.
 
@@ -59,16 +62,13 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 
 | Herramienta | Para qué la usamos | ¿Por qué esta? |
 |---|---|---|
-| **Python 3.12 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
-| **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un mail mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
-| **MySQL** | Perfil y estado de cuenta | Datos con estructura fija y operaciones críticas (como bloquear una cuenta) que tienen que quedar consistentes. Una base relacional con transacciones es lo ideal. |
-| **MongoDB** | Direcciones y preferencias | Un cliente puede tener 0 o 10 direcciones y preferencias distintas a las de otro. Un documento JSON flexible se adapta mejor que una tabla rígida. |
-| **RabbitMQ** | Recibir eventos de otros módulos (ej. `ViajeFinalizado`) | Desacopla: los módulos no necesitan estar todos prendidos al mismo tiempo para comunicarse. |
-| **Redis** | Caché de perfiles | M5 y M9 consultan perfiles todo el tiempo. Tenerlos en memoria evita ir a la base en cada pedido y las respuestas salen más rápido. |
-| **Keycloak** | Login y roles | Es el servidor de identidad compartido por toda la plataforma (configurado en [keycloak/](keycloak/)). No reinventamos la autenticación: solo validamos el token. |
+| **Python 3.13 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
+| **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un teléfono mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
+| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias y, más adelante, bloqueos y calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
+| **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
+| **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
+| **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
 | **Docker + docker-compose** | Levantar todo con un comando | Todos corremos exactamente las mismas versiones. Generamos imágenes versionadas (formato estándar OCI), así "en mi máquina anda" deja de ser excusa. |
-
-> 💡 Usar dos bases de datos distintas tiene nombre: **persistencia políglota**. La idea es simple: usar la herramienta adecuada para cada tipo de dato, en vez de meter todo a la fuerza en una sola.
 
 ### 12-Factor App, en dos patadas
 
@@ -101,7 +101,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
 - [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
-- [ ] Caché de perfiles con Redis y eventos con RabbitMQ (TP2)
+- [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
 
 ---
 
