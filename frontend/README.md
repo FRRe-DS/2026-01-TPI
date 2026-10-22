@@ -30,7 +30,9 @@ npm install      # solo la primera vez, o cuando cambie package.json
 npm run dev
 ```
 
-Abrir http://localhost:5173: redirige al login de Keycloak y, al entrar, vuelve a la app.
+Abrir http://localhost:5173: si no hay sesión, muestra la pantalla de bienvenida con dos botones, **Crear cuenta** e **Ingresar**, que llevan a la pantalla de Keycloak. Al terminar, vuelve a la app ya con sesión.
+
+**Crear cuenta** necesita el registro activado en Keycloak: *Realm settings → Login → User registration*, y el rol `CLIENTE` en *Realm settings → User registration → Default roles* (si no, el usuario nuevo recibe 403 de la API).
 
 ## Estructura
 
@@ -40,10 +42,13 @@ frontend/
 ├── vite.config.js             # configuración de Vite (puerto 5173)
 ├── .env.example               # URLs configurables (RNF-06)
 └── src/
-    ├── main.jsx               # hace el login y arranca la app
+    ├── main.jsx               # se fija si hay sesión: muestra la bienvenida o la app
     ├── keycloak.js            # conexión con Keycloak
     ├── api.js                 # llamadas a la API de M2 con el token (rutas del contrato)
     ├── App.jsx                # pantalla principal: carga el perfil por el sub del token, lo crea o lo edita (PATCH)
     └── components/
-        └── ClienteForm.jsx    # formulario de datos personales
+        ├── Bienvenida.jsx     # pantalla de inicio sin sesión: Crear cuenta / Ingresar
+        ├── ClienteForm.jsx    # formulario de datos personales
+        ├── DireccionesCard.jsx  # tarjeta de direcciones frecuentes
+        └── PreferenciasCard.jsx # tarjeta de preferencias de viaje
 ```

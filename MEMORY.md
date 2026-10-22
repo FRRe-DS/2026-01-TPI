@@ -7,6 +7,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Etapa 1 (perfil, `/health`, roles, problem+json, `X-Request-Id`, `.env`) + `AGENTS.md` y `MEMORY.md`: PR #2, mergeado en `desarrollo-m2`. Probada en real el 21/10.
 - Etapa 2 (direcciones y preferencias, RF-2.2 y RF-2.3): PR #3, mergeado en `desarrollo-m2`. README actualizado (PR #4); probada en real el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR): todo OK.
 - Pruebas: 153 casos = 105 de API + 48 unitarias (`test_unitarias.py`, en `desarrollo-m2` el 22/10). Las de API no son unitarias: prueban la app entera con base y tokens simulados.
+- Rama `feature/pantalla-bienvenida` (22/10): el front ya no fuerza el login; muestra una bienvenida propia con Crear cuenta / Ingresar que llevan a Keycloak. Crear cuenta requiere activar el registro y el rol por defecto CLIENTE en el realm (a mano, no está en el JSON).
 - Pendiente de otros: M5 (grupos 4 y 13) no confirmó si le alcanza con `obtenerEstadoCuenta`; formato del token de M1 abierto en el issue #9 de `2026-17-TPI`; M6 sin contrato.
 - M9 firma sus tokens de SERVICIO con HS256 y una clave compartida mientras M1 sea simulado (issue #9, 20/10). Hoy solo aceptamos RS256 por JWKS: hay que soportarlo por configuración antes o durante la etapa 3.
 
