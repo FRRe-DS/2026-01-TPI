@@ -88,3 +88,9 @@ export const obtenerPreferencias = (clienteId) =>
 // PUT: reemplaza todas las preferencias
 export const guardarPreferencias = (clienteId, preferencias) =>
   pedir('PUT', `/api/v1/clientes/${clienteId}/preferencias`, preferencias)
+
+// ---------------------------------------------------------- Estado de cuenta (RF-2.6)
+
+// { clienteId, estado: 'ACTIVO' | 'BLOQUEADO', bloqueosVigentes: [{ motivo, desde, hasta, ... }] }
+export const obtenerEstadoCuenta = (clienteId) =>
+  pedir('GET', `/api/v1/clientes/${clienteId}/estado-cuenta`)

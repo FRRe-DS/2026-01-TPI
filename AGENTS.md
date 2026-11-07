@@ -14,7 +14,7 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 |---|---|
 | `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del publicado en la cátedra (`FRRe-DS/2026-TPI`, PR #5). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
 | `m2-clientes/main.py` | Arma la app: middleware, manejadores de errores y routers. |
-| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. Hoy cubre las etapas 1 y 2. |
+| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3. |
 | `m2-clientes/security.py` | Validación del token (JWKS de M1), lectura de roles, `requiere_roles` y `verificar_dueno`. |
 | `m2-clientes/errores.py` | Errores en formato `application/problem+json` y todos los manejadores de excepciones. |
 | `m2-clientes/middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`). |
@@ -88,9 +88,9 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 - **MongoDB guarda milisegundos, no microsegundos.** Usá siempre `ahora()` de `rutas/comunes.py`; si no, lo que devuelve un `POST` no coincide con el `GET` siguiente.
 - **Desde FastAPI 0.143, `include_router` envuelve las rutas** (`app.router.routes` ya no tiene `path_regex` ni `methods`). Para saber si una ruta existe, usá `ruta.matches(scope)`, como en `middleware.py` y en el `Allow` del 405 en `errores.py`.
 - **Una dirección se busca siempre por `_id` y `clienteId`:** la de otro cliente es `404` en esa ruta.
-- **Datos de otros módulos, solo por su API** (RNF-05): el historial y la validación de viajes salen de la API de M6, nunca de su base, y no se copian a la nuestra. Para hablar con otros módulos: 2 s por intento, un reintento solo en los GET, y si no hay respuesta, `503` con el `type` de dependencia. La espera máxima publicada en el contrato es 4,2 s; cambiarla es cambiar el contrato. M6 todavía no tiene contrato, así que para probar hay que usar un mock.
+- **Datos de otros módulos, solo por su API** (RNF-05): el historial y la validación de viajes salen de la API de M6, nunca de su base, y no se copian a la nuestra. Para hablar con otros módulos: 2 s por intento, un reintento solo en los GET, y si no hay respuesta, `503` con el `type` de dependencia. La espera máxima publicada en el contrato es 4,2 s; cambiarla es cambiar el contrato. M6 publicó su contrato en la cátedra (`contratos/m6_viajes/openapi.yml`); para probar sin M6 hay que usar un mock.
 - **Calificaciones:** el conductor sale de M6, no del cuerpo. Hay una sola por (cliente, viaje), garantizada en la base con índice único; un segundo intento da `409`.
-- **Bloqueos:** nunca se borran. Levantar uno es un `PATCH` con motivo, que registra quién y cuándo lo levantó; si ya estaba levantado, `409`. El `estado` del cliente (`ACTIVO` o `BLOQUEADO`) se calcula a partir de los bloqueos vigentes; hasta la etapa 3 es siempre `ACTIVO`.
+- **Bloqueos:** nunca se borran. Levantar uno es un `PATCH` con motivo, que registra quién y cuándo lo levantó; si ya no estaba vigente (levantado o vencido), `409`. `vigente` no se guarda: se calcula al leer (no levantado y sin pasar su `hasta`), con `esta_vigente` en Python y `filtro_vigentes` en MongoDB, que tienen que coincidir. El `estado` del cliente (`ACTIVO` o `BLOQUEADO`) sale de ahí, en el perfil y en el estado de cuenta.
 - **El contrato no tiene** baja del perfil, listado de clientes, `email` en M2 ni `usadoEn` en las direcciones. Las direcciones `RECIENTE` las carga el cliente, igual que las favoritas.
 - **Paginación:** `page` empieza en 0; `size` vale 20 por defecto y como máximo 100. La respuesta lleva `items`, `page`, `size`, `totalElementos` y `totalPaginas`.
 - **`Idempotency-Key`:** es obligatoria en los POST. Por ahora solo se exige: un reintento con la misma clave da `409`, no la respuesta original. La idempotencia real queda para la etapa 5.
@@ -98,11 +98,11 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 ## Forma de trabajar
 
-- **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. Cuando estén las 5 etapas, se hace un único PR de `desarrollo-m2` a `main`. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados.
+- **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. `main` ya recibió las etapas 1 y 2 (PR #6); lo que sigue se junta en `desarrollo-m2` y pasa a `main` con otro PR. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados.
 - **Etapas:**
   1. perfil (hecha);
   2. direcciones y preferencias (hecha);
-  3. estado de cuenta y bloqueos;
+  3. estado de cuenta y bloqueos (hecha);
   4. calificaciones e historial (M6);
   5. idempotencia.
 - **Planificá antes de tocar código** cuando el cambio afecta más de un archivo, toca el contrato o la integración con otros módulos, o cambia cómo se guardan los datos. Mostrá el plan y esperá el visto bueno.

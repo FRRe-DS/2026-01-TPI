@@ -2,8 +2,8 @@
 # Sigue el contrato común acordado con el Grupo 17: contratos/m2_clientes/openapi.yml
 # Los endpoints están en rutas/, un archivo por recurso del contrato.
 #
-# Cubierto: salud, perfil (etapa 1), direcciones y preferencias (etapa 2).
-# Falta: estado de cuenta y bloqueos (3), calificaciones e historial (4), idempotencia (5).
+# Cubierto: salud, perfil (etapa 1), direcciones y preferencias (etapa 2), estado de cuenta y bloqueos (etapa 3).
+# Falta: calificaciones e historial (4), idempotencia (5).
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,7 +13,7 @@ import config
 import database
 import errores
 from middleware import controles_generales
-from rutas import direcciones, perfil, preferencias, salud
+from rutas import bloqueos, direcciones, estado_cuenta, perfil, preferencias, salud
 
 
 @asynccontextmanager
@@ -40,5 +40,5 @@ app.add_middleware(
     expose_headers=["X-Request-Id", "Location", "Retry-After"],
 )
 
-for modulo in (salud, perfil, direcciones, preferencias):
+for modulo in (salud, perfil, direcciones, preferencias, estado_cuenta, bloqueos):
     app.include_router(modulo.router)

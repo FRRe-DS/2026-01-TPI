@@ -5,6 +5,9 @@
 #   Las preferencias se guardan dentro del perfil, en el campo "preferencias" (relación 1 a 1).
 # - direcciones: un documento por dirección frecuente, con el clienteId de su dueño.
 #   Van aparte porque se listan paginadas y se editan de a una.
+# - bloqueos: un documento por bloqueo administrativo, con el clienteId del bloqueado.
+#   Nunca se borran: levantar uno agrega levantadoEn, levantadoPor y motivoLevantamiento.
+#   "vigente" no se guarda: se calcula al leer (no levantado y sin pasar su "hasta").
 import logging
 
 from pymongo import ASCENDING, DESCENDING, MongoClient
@@ -25,11 +28,17 @@ def coleccion_direcciones():
     return db["direcciones"]
 
 
+def coleccion_bloqueos():
+    return db["bloqueos"]
+
+
 def asegurar_indices():
     """Crea los índices que usan las consultas. Se llama al arrancar la API; si Mongo no está, sigue igual."""
     try:
         # Listado de direcciones de un cliente, más nuevas primero
         coleccion_direcciones().create_index([("clienteId", ASCENDING), ("creadoEn", DESCENDING)])
+        # Bloqueos de un cliente, más nuevos primero (listado y cálculo del estado)
+        coleccion_bloqueos().create_index([("clienteId", ASCENDING), ("creadoEn", DESCENDING)])
     except Exception as exc:  # la API arranca igual; /health va a avisar que la base no responde
         log.warning("No se pudieron crear los índices de MongoDB: %s", exc)
 

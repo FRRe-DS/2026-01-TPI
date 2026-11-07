@@ -64,7 +64,7 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 |---|---|---|
 | **Python 3.13 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
 | **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un teléfono mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
-| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias y, más adelante, bloqueos y calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
+| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias, bloqueos y, más adelante, calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
 | **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
 | **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
 | **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
@@ -91,13 +91,13 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
-- [x] Pruebas automáticas (RNF-07), 153 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos)
+- [x] Pruebas automáticas (RNF-07), 214 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
+- [x] **Etapa 3 del contrato:** estado de cuenta (para el cliente, el operador y los módulos con rol `SERVICIO`, como M5 y M9) y bloqueos administrativos: el operador los registra, con fecha de fin opcional, y los levanta; nunca se borran (RF-2.6). El front avisa al cliente si su cuenta está bloqueada
 
 **Pendiente**
 
-- [ ] Etapa 3: estado de cuenta y bloqueos administrativos, con rol `SERVICIO` para M5 y M9 (RF-2.6)
 - [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
 - [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
@@ -222,6 +222,8 @@ En http://localhost:8000/docs → **Authorize** → pegar el token → probar lo
 
 Esa cuenta tiene rol `OPERADOR` (paso 3b2): puede **consultar** cualquier perfil, pero no crearlo ni modificarlo, porque eso lo hace solo el `CLIENTE` dueño del perfil.
 
+También es la que **bloquea** cuentas. Para probarlo: entrar al front con `cliente-demo`, copiar su `clienteId` (es el `sub` del token; se ve con `GET /api/v1/clientes/...` o en el token decodificado), hacer en Swagger `POST /api/v1/clientes/{clienteId}/bloqueos` con `{"motivo": "Prueba"}` y recargar el front: aparece el aviso de cuenta bloqueada. Con `PATCH .../bloqueos/{bloqueoId}` y `{"motivo": "Listo"}` se levanta.
+
 ### 7. Correr las pruebas de la API
 
 No necesitan Keycloak ni MongoDB: usan una base en memoria y tokens de prueba.
@@ -235,8 +237,8 @@ python -m pytest
 
 Hay dos tipos:
 
-- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
-- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id` y reglas de los modelos.
+- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`, `test_bloqueos.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
+- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id`, reglas de los modelos y vigencia de los bloqueos.
 
 ### Para apagar todo
 
@@ -271,6 +273,11 @@ Siguen el contrato común [`contratos/m2_clientes/openapi.yml`](contratos/m2_cli
 | `DELETE` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Elimina la dirección (`204`) |
 | `GET` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas), `OPERADOR` | Trae las preferencias; si nunca se guardaron, listas vacías |
 | `PUT` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas) | Reemplaza todas las preferencias |
+| `GET` | `/api/v1/clientes/{clienteId}/estado-cuenta` | `CLIENTE` (el suyo), `OPERADOR`, `SERVICIO` | `ACTIVO` o `BLOQUEADO` y los bloqueos vigentes. Es lo que consultan M5 y M9 |
+| `GET` | `/api/v1/clientes/{clienteId}/bloqueos` | `OPERADOR` | Historial paginado, más nuevos primero. Filtro opcional `vigente` |
+| `POST` | `/api/v1/clientes/{clienteId}/bloqueos` | `OPERADOR` | Bloquea al cliente (`motivo` y opcionalmente `hasta`). Exige `Idempotency-Key`. `422` si `hasta` ya pasó |
+| `GET` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Trae un bloqueo |
+| `PATCH` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Levanta el bloqueo (con `motivo`). `409` si ya no estaba vigente |
 
 Todos menos `/health` requieren `Authorization: Bearer <token>`. Los errores vuelven en formato `application/problem+json`, y toda respuesta trae `X-Request-Id`.
 

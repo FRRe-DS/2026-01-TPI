@@ -1,9 +1,10 @@
 # Pruebas unitarias (RNF-07): funciones sueltas, sin pasar por la API ni por HTTP.
 # Cubren la lógica propia que las pruebas de API no llegan a ejercitar del todo:
-# lectura de roles del token, regla de dueño, paginación, fechas, X-Request-Id y reglas de los modelos.
+# lectura de roles del token, regla de dueño, paginación, fechas, X-Request-Id, reglas de los modelos
+# y vigencia de los bloqueos.
 import time
 import uuid
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 import jwt
 import mongomock
@@ -16,7 +17,8 @@ from pydantic import ValidationError
 import security
 from conftest import token
 from middleware import _FORMATO_REQUEST_ID
-from models import ClienteCambios, ClienteNuevo, Coordenadas, DireccionNueva, Preferencias
+from models import BloqueoNuevo, ClienteCambios, ClienteNuevo, Coordenadas, DireccionNueva, Preferencias
+from rutas.bloqueos import a_milisegundos_utc, esta_vigente, filtro_no_vigentes, filtro_vigentes
 from rutas.comunes import ahora, paginar
 from security import CLIENTE, OPERADOR, SERVICIO, Usuario, requiere_roles, usuario_actual, verificar_dueno
 
@@ -219,3 +221,48 @@ def test_preferencias_por_defecto_son_listas_vacias():
 def test_preferencias_sin_repetidos():
     with pytest.raises(ValidationError):
         Preferencias(tiposVehiculo=["AUTO", "AUTO"], canales=[], accesibilidad=[])
+
+
+# ------------------------------------------------------------ Vigencia de los bloqueos
+
+AHORA = datetime(2026, 11, 7, 20, 0, tzinfo=timezone.utc)
+CASOS_VIGENCIA = [
+    ({}, True),                                                    # sin fin y sin levantar
+    ({"hasta": AHORA + timedelta(minutes=1)}, True),               # todavía no llegó su fin
+    ({"hasta": AHORA}, False),                                     # vence justo ahora
+    ({"hasta": AHORA - timedelta(days=1)}, False),                 # vencido
+    ({"levantadoEn": AHORA - timedelta(hours=1)}, False),          # levantado
+    ({"hasta": AHORA + timedelta(days=1), "levantadoEn": AHORA}, False),  # levantado antes de su fin
+]
+
+
+@pytest.mark.parametrize("campos,vigente", CASOS_VIGENCIA)
+def test_esta_vigente(campos, vigente):
+    assert esta_vigente(campos, AHORA) is vigente
+
+
+def test_los_filtros_de_mongo_coinciden_con_esta_vigente():
+    # La consulta a MongoDB y la regla en Python tienen que dar lo mismo en todos los casos
+    col = mongomock.MongoClient(tz_aware=True)["u"]["bloqueos"]
+    col.insert_many([{"_id": i, **campos} for i, (campos, _) in enumerate(CASOS_VIGENCIA)])
+    esperados_vigentes = {i for i, (_, vigente) in enumerate(CASOS_VIGENCIA) if vigente}
+    assert {d["_id"] for d in col.find(filtro_vigentes(AHORA))} == esperados_vigentes
+    assert {d["_id"] for d in col.find(filtro_no_vigentes(AHORA))} == set(range(len(CASOS_VIGENCIA))) - esperados_vigentes
+
+
+def test_fecha_de_fin_se_pasa_a_utc_con_milisegundos():
+    argentina = timezone(timedelta(hours=-3))
+    fecha = a_milisegundos_utc(datetime(2026, 11, 7, 17, 0, 0, 123456, tzinfo=argentina))
+    assert fecha == datetime(2026, 11, 7, 20, 0, 0, 123000, tzinfo=timezone.utc)
+    assert fecha.tzinfo == timezone.utc
+
+
+def test_bloqueo_nuevo_exige_zona_horaria_y_rechaza_null():
+    assert BloqueoNuevo(motivo="Deuda").hasta is None
+    BloqueoNuevo(motivo="Deuda", hasta="2030-01-01T10:00:00Z")
+    with pytest.raises(ValidationError):
+        BloqueoNuevo(motivo="Deuda", hasta="2030-01-01T10:00:00")   # sin zona horaria
+    with pytest.raises(ValidationError):
+        BloqueoNuevo(motivo="Deuda", hasta=None)
+    with pytest.raises(ValidationError):
+        BloqueoNuevo(motivo="")

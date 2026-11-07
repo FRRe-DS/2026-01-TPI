@@ -1,6 +1,6 @@
 # Front de M2 · Clientes
 
-Página web para que un cliente inicie sesión con Keycloak y cree, vea y edite su perfil usando la API de M2, según el contrato común (`contratos/m2_clientes/openapi.yml`). Las direcciones frecuentes y las preferencias se vuelven a agregar en la etapa 2.
+Página web para que un cliente inicie sesión con Keycloak y cree, vea y edite su perfil, sus direcciones frecuentes y sus preferencias usando la API de M2, según el contrato común (`contratos/m2_clientes/openapi.yml`). Si un operador bloqueó su cuenta, la página le avisa por qué y hasta cuándo.
 
 **Tecnologías:** React 19 + Vite (proyecto y servidor de desarrollo) + Mantine (componentes visuales) + keycloak-js (login).
 
@@ -50,5 +50,6 @@ frontend/
         ├── Bienvenida.jsx     # pantalla de inicio sin sesión: Crear cuenta / Ingresar
         ├── ClienteForm.jsx    # formulario de datos personales
         ├── DireccionesCard.jsx  # tarjeta de direcciones frecuentes
+        ├── EstadoCuentaAviso.jsx # aviso de cuenta bloqueada, con los motivos
         └── PreferenciasCard.jsx # tarjeta de preferencias de viaje
 ```

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 Nombre = Annotated[str, StringConstraints(min_length=1, max_length=100)]
 # Teléfono en formato E.164, por ejemplo +5493624000000
@@ -180,3 +180,47 @@ class Preferencias(BaseModel):
     def por_defecto(cls) -> "Preferencias":
         """Lo que devuelve el GET si el cliente nunca guardó preferencias."""
         return cls(tiposVehiculo=[], canales=[], accesibilidad=[])
+
+
+# ------------------------------------------------------------ Estado de cuenta y bloqueos (RF-2.6)
+
+Motivo = Annotated[str, StringConstraints(min_length=1, max_length=500)]
+
+
+class BloqueoNuevo(BaseModel):
+    """Cuerpo de POST .../bloqueos. Sin `hasta`, el bloqueo sigue hasta que un operador lo levante."""
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: Motivo
+    hasta: AwareDatetime | None = None  # con zona horaria: una fecha sin zona es ambigua (400)
+
+    @model_validator(mode="after")
+    def sin_nulos(self):
+        _rechazar_nulos(self)
+        return self
+
+
+class LevantamientoBloqueo(BaseModel):
+    """Cuerpo de PATCH .../bloqueos/{bloqueoId}: por qué se levanta."""
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: Motivo
+
+
+class Bloqueo(BaseModel):
+    bloqueoId: str
+    motivo: str
+    vigente: bool
+    desde: datetime | None = None
+    hasta: datetime | None = None
+    creadoEn: datetime
+    creadoPor: str
+    levantadoEn: datetime | None = None
+    levantadoPor: str | None = None
+    motivoLevantamiento: str | None = None
+
+
+class EstadoCuenta(BaseModel):
+    clienteId: str
+    estado: EstadoCliente
+    bloqueosVigentes: list[Bloqueo]
