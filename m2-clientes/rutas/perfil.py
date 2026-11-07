@@ -10,21 +10,21 @@ from pymongo.errors import DuplicateKeyError
 import database
 from errores import ErrorDominio
 from models import Cliente, ClienteCambios, ClienteNuevo, EstadoCliente
+from rutas.bloqueos import estado_del_cliente
 from rutas.comunes import IdempotencyKey, a_json, ahora, buscar_perfil_o_404
 from security import CLIENTE, OPERADOR, Usuario, requiere_roles, verificar_dueno
 
 router = APIRouter(prefix="/api/v1/clientes", tags=["Perfil"])
 
 
-def a_cliente(doc: dict) -> Cliente:
+def a_cliente(doc: dict, estado: EstadoCliente) -> Cliente:
     return Cliente(
         clienteId=doc["_id"],
         nombre=doc["nombre"],
         apellido=doc["apellido"],
         telefono=doc["telefono"],
         fechaNacimiento=date.fromisoformat(doc["fechaNacimiento"]) if doc.get("fechaNacimiento") else None,
-        # Etapa 3: el estado se calcula a partir de los bloqueos vigentes. Por ahora, siempre ACTIVO.
-        estado=EstadoCliente.ACTIVO,
+        estado=estado,  # BLOQUEADO si tiene algún bloqueo vigente (rutas/bloqueos.py)
         creadoEn=doc["creadoEn"],
         actualizadoEn=doc["actualizadoEn"],
     )
@@ -55,7 +55,8 @@ def crear_cliente(
     except DuplicateKeyError:
         raise ErrorDominio(409, "/errores/cliente-existente", "El cliente ya tiene un perfil",
                            "Ya existe un perfil para este usuario. Usá PATCH para modificarlo.")
-    return JSONResponse(a_json(a_cliente(doc)), status_code=201,
+    # Un perfil recién creado no puede tener bloqueos: se bloquea a clientes que ya tienen perfil
+    return JSONResponse(a_json(a_cliente(doc, EstadoCliente.ACTIVO)), status_code=201,
                         headers={"Location": f"/api/v1/clientes/{usuario.sub}"})
 
 
@@ -64,7 +65,7 @@ def crear_cliente(
 def obtener_cliente(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR))):
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)
-    return a_json(a_cliente(buscar_perfil_o_404(cliente_id)))
+    return a_json(a_cliente(buscar_perfil_o_404(cliente_id), estado_del_cliente(cliente_id)))
 
 
 @router.patch("/{clienteId}", operation_id="actualizarCliente",
@@ -80,4 +81,4 @@ def actualizar_cliente(clienteId: UUID, cambios: ClienteCambios,
         nuevos["fechaNacimiento"] = nuevos["fechaNacimiento"].isoformat()
     nuevos["actualizadoEn"] = ahora()
     database.coleccion_clientes().update_one({"_id": cliente_id}, {"$set": nuevos})
-    return a_json(a_cliente(buscar_perfil_o_404(cliente_id)))
+    return a_json(a_cliente(buscar_perfil_o_404(cliente_id), estado_del_cliente(cliente_id)))
