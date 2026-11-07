@@ -94,6 +94,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
+- [x] Imágenes Docker de la API y del front (`Dockerfile` en `m2-clientes/` y en `frontend/`): sin root, con healthcheck y etiquetas OCI. La API se puede levantar junto a MongoDB con `docker compose --profile api up -d` (RNF-04)
 - [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
 - [x] Pruebas automáticas (RNF-07), 214 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
@@ -104,7 +105,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 
 - [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
-- [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
+- [ ] Publicar las imágenes de la API y del front en GitHub Packages (GHCR) y armar un compose único con el realm común de Keycloak (RNF-04)
 - [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
 
 ---
@@ -246,6 +247,25 @@ Hay dos tipos:
 
 Las mismas pruebas, más el build del front, corren solas en GitHub en cada push y en cada PR (pestaña **Actions** del repo, o el tilde ✔/✖ al lado de cada commit).
 
+### 8. (Opcional) Correr la API y el front en Docker
+
+En vez de uvicorn y `npm run dev`, se pueden correr como contenedores (Keycloak tiene que estar levantado, paso 2):
+
+```powershell
+# API + MongoDB (http://localhost:8000/docs). Si ya corre uvicorn, cortalo antes: usan el mismo puerto
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+docker compose --profile api up -d --build
+
+# Front (http://localhost:5173). Si ya corre npm run dev, cortalo antes
+cd ..\frontend
+docker build -t ghcr.io/frre-ds/m2-clientes-front:dev .
+docker run -d --name m2-front -p 5173:80 ghcr.io/frre-ds/m2-clientes-front:dev
+```
+
+- La API toma la configuración del `environment` de `m2-clientes/docker-compose.yml` (MongoDB por su nombre de servicio y Keycloak por `host.docker.internal`), no del `.env`.
+- El front lleva las URLs de la API y de Keycloak adentro del código compilado. Para otras, pasarlas al construir: `docker build --build-arg VITE_API_URL=http://... -t ... .` (las variables son las de `frontend/.env.example`).
+- `docker ps` muestra si cada contenedor está `healthy`. Para apagarlos: `docker compose --profile api down` en `m2-clientes` y `docker rm -f m2-front`.
+
 ### Para apagar todo
 
 - Ctrl+C en las ventanas de uvicorn y de `npm run dev`.
@@ -319,7 +339,8 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
     ├── tests/                # Pruebas automáticas (pytest)
     ├── requirements.txt      # Librerías de Python
     ├── requirements-dev.txt  # Librerías para las pruebas
-    └── docker-compose.yml    # MongoDB local
+    ├── Dockerfile            # Imagen de la API (la del front está en frontend/Dockerfile)
+    └── docker-compose.yml    # MongoDB local y, con --profile api, la API en un contenedor
 ```
 
 ---
