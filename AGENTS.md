@@ -21,6 +21,7 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 | `m2-clientes/config.py` | Toda la configuración, leída de variables de entorno o de `.env` (ver `.env.example`). |
 | `m2-clientes/tests/contrato.py` | Valida las respuestas contra los esquemas del contrato. |
 | `frontend/src/api.js` | Único lugar donde el front llama a la API. |
+| `.github/workflows/ci.yml` | CI (RNF-17): en cada push y PR corre `pytest` (Python 3.13) y `npm run build` (Node 22). |
 | `keycloak/` | Docker Compose y realm de Keycloak. Lo armó otro integrante y puede venir de la cátedra: `keycloak/.env` tiene credenciales de desarrollo y **sí** está versionado. |
 
 ## Comandos
@@ -148,7 +149,7 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 ## Verificación
 
-1. `cd m2-clientes; python -m pytest`: tienen que pasar todas. Las pruebas también validan cada respuesta contra el contrato.
+1. `cd m2-clientes; python -m pytest`: tienen que pasar todas. Las pruebas también validan cada respuesta contra el contrato. El CI las vuelve a correr en el PR: no mergear con el CI en rojo.
 2. Si tocaste el front: `cd frontend; npm run build` sin errores.
 3. Revisá en `contratos/m2_clientes/openapi.yml` que la operación coincida: ruta, método, roles en `security`, campos y códigos de respuesta.
 4. Prueba manual con todo levantado: entrar al front con `cliente-demo`, hacer el flujo afectado y, para operaciones de OPERADOR, probar en Swagger (`/docs`) con el token de la cuenta `grupo-01` (paso 6 del README).

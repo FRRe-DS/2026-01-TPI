@@ -1,5 +1,7 @@
 # 🚕 Plataforma de Movilidad Urbana — Módulo M2: Clientes
 
+[![CI](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml/badge.svg?branch=desarrollo-m2)](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml)
+
 **Trabajo Práctico Integrador 2026**  
 **Institución:** Universidad Tecnológica Nacional – Facultad Regional Resistencia (UTN FRRe)  
 **Cátedra:** Desarrollo de Software  
@@ -68,6 +70,7 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 | **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
 | **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
 | **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
+| **GitHub Actions** | Integración continua (RNF-17) | En cada push y en cada PR corre las pruebas de la API y compila el front, sin instalar nada: si algo se rompe, el PR lo muestra antes de mergear. Está en [`.github/workflows/ci.yml`](.github/workflows/ci.yml). |
 | **Docker + docker-compose** | Levantar todo con un comando | Todos corremos exactamente las mismas versiones. Generamos imágenes versionadas (formato estándar OCI), así "en mi máquina anda" deja de ser excusa. |
 
 ### 12-Factor App, en dos patadas
@@ -91,6 +94,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
+- [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
 - [x] Pruebas automáticas (RNF-07), 214 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
@@ -239,6 +243,8 @@ Hay dos tipos:
 
 - **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`, `test_bloqueos.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
 - **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id`, reglas de los modelos y vigencia de los bloqueos.
+
+Las mismas pruebas, más el build del front, corren solas en GitHub en cada push y en cada PR (pestaña **Actions** del repo, o el tilde ✔/✖ al lado de cada commit).
 
 ### Para apagar todo
 
