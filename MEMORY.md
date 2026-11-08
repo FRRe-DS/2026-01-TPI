@@ -5,9 +5,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
 - Ramas: las etapas se integran en `desarrollo-m2`; `main` recibió todo lo hecho hasta el 22/10 (PR #6). Lo que sigue va a `desarrollo-m2` y después otro merge a `main`. Siempre merge commit.
 - Etapas 1 (perfil, PR #2) y 2 (direcciones y preferencias, PR #3): probadas en real el 21 y el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR).
-- Etapa 3 (estado de cuenta y bloqueos, RF-2.6) + aviso de cuenta bloqueada en el front: PR #8, mergeado en `desarrollo-m2` (7/11). Falta probarla en real.
+- Etapa 3 (estado de cuenta y bloqueos, RF-2.6) + aviso de cuenta bloqueada en el front: PR #8, mergeado en `desarrollo-m2`. Probada en real el 7/11 (bloquear y levantar desde Swagger como OPERADOR, aviso en el front): todo OK.
 - CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
-- Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados con bases equivalentes (sin las imágenes oficiales ni MongoDB real): falta probarlos en la PC con Docker Desktop.
+- Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados en la PC el 7/11 con Docker Desktop (API + MongoDB con `--profile api`, front en `5173:80`): todo OK, incluida la prueba de bloqueos.
 - Pruebas: 214 casos = 157 de API + 57 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
 - Pantalla de bienvenida (PR #5). Crear cuenta requiere el registro y el rol por defecto CLIENTE en el realm.
 - **Keycloak de la cátedra (3/11):** `FRRe-DS/2026-TPI/keycloak`, realm `ds-2026-realm` con roles por módulo (`clientes-be`…), scopes `clientes:read/write` sin asignar a nadie, sin roles de persona ni `aud`. El profe: `grupo-01` es nuestra aplicación y los usuarios se crean asociados a ella; los scopes de M2 los definimos con el Grupo 17.
@@ -45,8 +45,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Próximos pasos
 1. Cuando el Grupo 17 responda: PR del contrato a la cátedra; adaptar la API (verificar `aud` y scopes, rol + scope juntos); Docker (Dockerfiles, compose único con el realm del Grupo 17, publicar en GHCR con GitHub Actions).
-2. Probar la etapa 3 en real (bloquear desde Swagger con `grupo-01`, ver el aviso en el front).
-3. Probar los contenedores en la PC; después, mensajes al profe y al consorcio.
+2. Mensajes al profe, al consorcio y recordatorio a sando.
+3. Publicar las imágenes en GHCR (workflow de GitHub Actions) cuando se acuerde el realm.
 4. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
 5. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
 6. Seguir el issue #7 (nuestro repo) y la respuesta de M5 y M9.
