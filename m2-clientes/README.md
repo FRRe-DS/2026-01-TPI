@@ -58,7 +58,8 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 | `tests/` | Pruebas automáticas: de API (validan cada respuesta contra el contrato) y unitarias (`test_unitarias.py`, funciones sueltas sin HTTP) |
 | `requirements.txt` | Librerías de Python (usar Python 3.12 o 3.13) |
 | `requirements-dev.txt` | Librerías para las pruebas |
-| `docker-compose.yml` | MongoDB local |
+| `docker-compose.yml` | MongoDB local y, con `--profile api`, la API en un contenedor |
+| `Dockerfile`, `.dockerignore` | Imagen de la API: Python 3.13 slim, usuario sin privilegios, healthcheck contra `/health`. No copia el `.env` ni los tests |
 
 ## Decisiones de la etapa 1
 

@@ -1,0 +1,8 @@
+# Lo que no entra en la imagen del front
+node_modules/
+dist/
+.env
+.env.local
+Dockerfile
+.dockerignore
+README.md

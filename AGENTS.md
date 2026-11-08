@@ -21,6 +21,7 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 | `m2-clientes/config.py` | Toda la configuración, leída de variables de entorno o de `.env` (ver `.env.example`). |
 | `m2-clientes/tests/contrato.py` | Valida las respuestas contra los esquemas del contrato. |
 | `frontend/src/api.js` | Único lugar donde el front llama a la API. |
+| `m2-clientes/Dockerfile`, `frontend/Dockerfile` | Imágenes OCI (RNF-04). La del front recibe las `VITE_*` como `--build-arg` (Vite las fija al compilar). La API se levanta con MongoDB usando `docker compose --profile api up -d --build` en `m2-clientes/`. |
 | `.github/workflows/ci.yml` | CI (RNF-17): en cada push y PR corre `pytest` (Python 3.13) y `npm run build` (Node 22). |
 | `keycloak/` | Docker Compose y realm de Keycloak. Lo armó otro integrante y puede venir de la cátedra: `keycloak/.env` tiene credenciales de desarrollo y **sí** está versionado. |
 
