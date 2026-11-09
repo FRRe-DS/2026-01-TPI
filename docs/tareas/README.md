@@ -27,6 +27,8 @@ Si el equipo prefiere usar issues de GitHub para asignar las tareas (y que GitHu
 
 ## Calendario
 
+Las fechas son **tentativas** y se pueden ajustar según cómo avancemos. La única fija es la de la **presentación, el jueves 19/11**.
+
 | Fecha | Qué tiene que estar |
 |---|---|
 | Lun 9/11 | Reunión de arranque: Lucas muestra el sistema funcionando y se reparten las tareas. |
