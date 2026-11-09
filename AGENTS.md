@@ -102,7 +102,7 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 
 ## Forma de trabajar
 
-- **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. `main` ya recibió las etapas 1 y 2 (PR #6); lo que sigue se junta en `desarrollo-m2` y pasa a `main` con otro PR. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados.
+- **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. `main` ya recibió las etapas 1 y 2 (PR #6); lo que sigue se junta en `desarrollo-m2` y pasa a `main` con otro PR. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados. **La rama por defecto del repo es `main`** (no la vamos a cambiar): al abrir un PR, la base hay que ponerla a mano en `desarrollo-m2`. Ya pasó una vez (el PR #15 entró en `main` y hubo que traerlo con el #16).
 - **Tareas del equipo:** lo que falta está dividido en tareas con guía propia en `docs/tareas/`. Si te piden trabajar en una, leé primero su guía: respetá los nombres de funciones y archivos que fija (otras tareas dependen de ellos) y, al terminar, actualizá su fila en `docs/tareas/README.md` en el mismo PR. Quien te pide ayuda puede estar empezando: explicá lo que hacés.
 - **Etapas:**
   1. perfil (hecha);
