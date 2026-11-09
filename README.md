@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml/badge.svg?branch=desarrollo-m2)](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml)
 
+> **¿Sos del equipo y recién empezás?** Seguí la [guía de primeros pasos](docs/primeros-pasos.md) y después buscá tu tarea en el [tablero](docs/tareas/README.md).
+
 **Trabajo Práctico Integrador 2026**  
 **Institución:** Universidad Tecnológica Nacional – Facultad Regional Resistencia (UTN FRRe)  
 **Cátedra:** Desarrollo de Software  
@@ -325,6 +327,7 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
 ```
 2026-01-TPI/
 ├── contratos/m2_clientes/    # Contrato OpenAPI común de M2 (acordado con el Grupo 17)
+├── docs/                     # Primeros pasos para el equipo y tablero de tareas (docs/tareas/)
 ├── keycloak/                 # Servidor de identidad (login y roles) + configuración del realm
 ├── frontend/                 # Front en React + Vite + Mantine (login con Keycloak)
 └── m2-clientes/              # Nuestro microservicio

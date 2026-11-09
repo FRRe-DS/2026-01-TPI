@@ -9,6 +9,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
 - Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados en la PC el 7/11 con Docker Desktop (API + MongoDB con `--profile api`, front en `5173:80`): todo OK, incluida la prueba de bloqueos.
 - Pruebas: 214 casos = 157 de API + 57 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
+- **Trabajo en equipo (8/11):** somos 9 (Lucas + 8 con poca experiencia, se ayudan con IA). Presentación el jue 19/11: cada uno explica qué hizo y cómo, sin ir línea por línea. Lo que falta está dividido en T01–T08 (equipo) y L1–L2 (Lucas), con guías en `docs/tareas/` y el tablero de responsables y estados en `docs/tareas/README.md`, que es el registro de quién hace qué. Guía de inicio: `docs/primeros-pasos.md`. Copia del plan en el proyecto de claude.ai (`claude/tareas-equipo.md`).
 - Pantalla de bienvenida (PR #5). Crear cuenta requiere el registro y el rol por defecto CLIENTE en el realm.
 - **Keycloak de la cátedra (3/11):** `FRRe-DS/2026-TPI/keycloak`, realm `ds-2026-realm` con roles por módulo (`clientes-be`…), scopes `clientes:read/write` sin asignar a nadie, sin roles de persona ni `aud`. El profe: `grupo-01` es nuestra aplicación y los usuarios se crean asociados a ella; los scopes de M2 los definimos con el Grupo 17.
 - **Contrato (commit 360caad del profe):** agregó `OAuth2Bearer` con scopes. Errores a corregir en un PR conjunto: `cleintes` → `clientes`, `tokenUrl` (`/protocol/openid-connect/token`) y rol + scope en el mismo renglón de `security` (si no, son alternativas).
@@ -44,9 +45,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **Trabajo por etapas en `desarrollo-m2`:** cada etapa se integra ahí y después pasa a `main` con un PR.
 
 ## Próximos pasos
-1. Cuando el Grupo 17 responda: PR del contrato a la cátedra; adaptar la API (verificar `aud` y scopes, rol + scope juntos); Docker (Dockerfiles, compose único con el realm del Grupo 17, publicar en GHCR con GitHub Actions).
-2. Mensajes al profe, al consorcio y recordatorio a sando.
-3. Publicar las imágenes en GHCR (workflow de GitHub Actions) cuando se acuerde el realm.
-4. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
-5. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
-6. Seguir el issue #7 (nuestro repo) y la respuesta de M5 y M9.
+1. Lun 9/11: reunión de arranque y asignar responsables en el tablero (`docs/tareas/README.md`).
+2. Calendario: mié 11 entorno listo; vie 13 T01, T06 y `obtener_viaje` de T02 mergeados; lun 16 todos los PR; mar 17 todo en `desarrollo-m2`; mié 18 merge a `main` y ensayo; jue 19 presentación.
+3. Lucas (L1): el Grupo 17 respondió (8/11) y armó el cambio del contrato (su PR #95); ellos abren el PR a la cátedra y nosotros lo aprobamos. Diferencias con lo nuestro: `obtenerEstadoCuenta` pide `clientes.estado:read` a todos, `503` si no se puede bajar el JWKS (hoy damos 401), `aud` fuera del contrato. Después: implementar scopes, el 503 y `aud` por configuración en `security.py`; idempotencia (etapa 5).
+4. Lucas (L2): revisar PR, mensajes al profe, al consorcio y recordatorio a sando; seguir el issue #7 y a M5 y M9.
