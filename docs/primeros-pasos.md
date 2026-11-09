@@ -213,6 +213,8 @@ git push -u origin feature/t01-m6-simulado   # la primera vez; después alcanza 
 #    base: desarrollo-m2  ←  compare: tu rama
 ```
 
+> **⚠️ Revisá la base del PR.** GitHub propone `main` por defecto. Antes de tocar "Create pull request", cambiá arriba la **base** a `desarrollo-m2` (tiene que decir `base: desarrollo-m2 ← compare: tu-rama`). Si el PR ya está abierto con base `main`, no lo mergees: tocá **Edit** al lado del título y cambiá la base.
+
 - Cada push dispara el **CI**: GitHub corre las pruebas solo. En el PR vas a ver tildes verdes ✔ o cruces rojas ✖.
 - Lucas revisa el PR y se mergea con **"Create a merge commit"**.
 
