@@ -52,6 +52,9 @@ Si te trabás más de un día con algo, avisá en el grupo: es preferible pedir 
 2. **Commits chicos** a medida que avanzás (`git add -A`, `git commit -m "..."`, `git push`).
 3. **Pruebas:** `python -m pytest` en `m2-clientes` (y `npm run build` en `frontend` si tocaste el front) tienen que pasar antes de abrir el PR.
 4. **PR hacia `desarrollo-m2`.** En la descripción contá qué hiciste y cómo se prueba. Lucas lo revisa.
+
+   > **⚠️ Revisá la base del PR.** GitHub propone `main` por defecto. Antes de tocar "Create pull request", cambiá arriba la **base** a `desarrollo-m2` (tiene que decir `base: desarrollo-m2 ← compare: tu-rama`). Si el PR ya está abierto con base `main`, no lo mergees: tocá **Edit** al lado del título y cambiá la base.
+
 5. **El CI tiene que estar en verde** (los tildes al final del PR). Si está en rojo, abrí el detalle en la pestaña Actions, arreglalo y volvé a hacer push.
 6. Se mergea con **"Create a merge commit"**.
 7. Actualizá esta tabla (estado y número de PR).

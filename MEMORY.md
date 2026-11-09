@@ -3,7 +3,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
-- Ramas: las etapas se integran en `desarrollo-m2`; `main` recibió todo lo hecho hasta el 22/10 (PR #6). Lo que sigue va a `desarrollo-m2` y después otro merge a `main`. Siempre merge commit.
+- Ramas: todo se integra en `desarrollo-m2` y pasa a `main` con un PR; siempre merge commit. Al 9/11 las dos tienen los mismos archivos (PR #16). La rama por defecto sigue siendo `main` (Lucas no tiene permisos de admin y decidió no pedir el cambio): hay que revisar la base de cada PR; el aviso está en el tablero y en la guía de primeros pasos.
 - Etapas 1 (perfil, PR #2) y 2 (direcciones y preferencias, PR #3): probadas en real el 21 y el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR).
 - Etapa 3 (estado de cuenta y bloqueos, RF-2.6) + aviso de cuenta bloqueada en el front: PR #8, mergeado en `desarrollo-m2`. Probada en real el 7/11 (bloquear y levantar desde Swagger como OPERADOR, aviso en el front): todo OK.
 - CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
