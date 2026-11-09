@@ -2,6 +2,7 @@
 // - Si todavía no tiene perfil (la API responde 404), muestra el formulario para crearlo (POST).
 // - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PATCH),
 //   y debajo sus direcciones frecuentes y sus preferencias.
+// - Si la cuenta está bloqueada, muestra arriba el aviso con los motivos (estado de cuenta).
 // El contrato no tiene baja del perfil, así que no hay botón para eliminarlo.
 import { useEffect, useState } from 'react'
 import {
@@ -12,6 +13,7 @@ import { notifications } from '@mantine/notifications'
 import keycloak from './keycloak'
 import { miClienteId, obtenerCliente, crearCliente, actualizarCliente } from './api'
 import ClienteForm from './components/ClienteForm'
+import EstadoCuentaAviso from './components/EstadoCuentaAviso'
 import DireccionesCard from './components/DireccionesCard'
 import PreferenciasCard from './components/PreferenciasCard'
 
@@ -107,6 +109,8 @@ export default function App() {
                     : 'Todavía no tenés un perfil de cliente. Completá tus datos para empezar a viajar.'}
                 </Text>
               </div>
+
+              {cliente && <EstadoCuentaAviso clienteId={cliente.clienteId} estado={cliente.estado} />}
 
               <ClienteForm
                 key={cliente?.actualizadoEn ?? 'nuevo'}

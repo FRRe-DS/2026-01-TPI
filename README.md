@@ -1,5 +1,9 @@
 # 🚕 Plataforma de Movilidad Urbana — Módulo M2: Clientes
 
+[![CI](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml/badge.svg?branch=desarrollo-m2)](https://github.com/FRRe-DS/2026-01-TPI/actions/workflows/ci.yml)
+
+> **¿Sos del equipo y recién empezás?** Seguí la [guía de primeros pasos](docs/primeros-pasos.md) y después buscá tu tarea en el [tablero](docs/tareas/README.md).
+
 **Trabajo Práctico Integrador 2026**  
 **Institución:** Universidad Tecnológica Nacional – Facultad Regional Resistencia (UTN FRRe)  
 **Cátedra:** Desarrollo de Software  
@@ -64,10 +68,11 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 |---|---|---|
 | **Python 3.13 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
 | **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un teléfono mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
-| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias y, más adelante, bloqueos y calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
+| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias, bloqueos y, más adelante, calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
 | **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
 | **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
 | **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
+| **GitHub Actions** | Integración continua (RNF-17) | En cada push y en cada PR corre las pruebas de la API y compila el front, sin instalar nada: si algo se rompe, el PR lo muestra antes de mergear. Está en [`.github/workflows/ci.yml`](.github/workflows/ci.yml). |
 | **Docker + docker-compose** | Levantar todo con un comando | Todos corremos exactamente las mismas versiones. Generamos imágenes versionadas (formato estándar OCI), así "en mi máquina anda" deja de ser excusa. |
 
 ### 12-Factor App, en dos patadas
@@ -91,16 +96,18 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Errores en formato `application/problem+json` (RFC 9457), `405` con `Allow`, `413`, `415` y `503` si la base no responde
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
-- [x] Pruebas automáticas (RNF-07), 153 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos)
+- [x] Imágenes Docker de la API y del front (`Dockerfile` en `m2-clientes/` y en `frontend/`): sin root, con healthcheck y etiquetas OCI. La API se puede levantar junto a MongoDB con `docker compose --profile api up -d` (RNF-04)
+- [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
+- [x] Pruebas automáticas (RNF-07), 214 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
+- [x] **Etapa 3 del contrato:** estado de cuenta (para el cliente, el operador y los módulos con rol `SERVICIO`, como M5 y M9) y bloqueos administrativos: el operador los registra, con fecha de fin opcional, y los levanta; nunca se borran (RF-2.6). El front avisa al cliente si su cuenta está bloqueada
 
 **Pendiente**
 
-- [ ] Etapa 3: estado de cuenta y bloqueos administrativos, con rol `SERVICIO` para M5 y M9 (RF-2.6)
 - [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
-- [ ] Dockerizar la API y el front (hoy solo MongoDB y Keycloak corren en Docker) (RNF-04)
+- [ ] Publicar las imágenes de la API y del front en GitHub Packages (GHCR) y armar un compose único con el realm común de Keycloak (RNF-04)
 - [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
 
 ---
@@ -222,6 +229,8 @@ En http://localhost:8000/docs → **Authorize** → pegar el token → probar lo
 
 Esa cuenta tiene rol `OPERADOR` (paso 3b2): puede **consultar** cualquier perfil, pero no crearlo ni modificarlo, porque eso lo hace solo el `CLIENTE` dueño del perfil.
 
+También es la que **bloquea** cuentas. Para probarlo: entrar al front con `cliente-demo`, copiar su `clienteId` (es el `sub` del token; se ve con `GET /api/v1/clientes/...` o en el token decodificado), hacer en Swagger `POST /api/v1/clientes/{clienteId}/bloqueos` con `{"motivo": "Prueba"}` y recargar el front: aparece el aviso de cuenta bloqueada. Con `PATCH .../bloqueos/{bloqueoId}` y `{"motivo": "Listo"}` se levanta.
+
 ### 7. Correr las pruebas de la API
 
 No necesitan Keycloak ni MongoDB: usan una base en memoria y tokens de prueba.
@@ -235,8 +244,29 @@ python -m pytest
 
 Hay dos tipos:
 
-- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
-- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id` y reglas de los modelos.
+- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`, `test_bloqueos.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
+- **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id`, reglas de los modelos y vigencia de los bloqueos.
+
+Las mismas pruebas, más el build del front, corren solas en GitHub en cada push y en cada PR (pestaña **Actions** del repo, o el tilde ✔/✖ al lado de cada commit).
+
+### 8. (Opcional) Correr la API y el front en Docker
+
+En vez de uvicorn y `npm run dev`, se pueden correr como contenedores (Keycloak tiene que estar levantado, paso 2):
+
+```powershell
+# API + MongoDB (http://localhost:8000/docs). Si ya corre uvicorn, cortalo antes: usan el mismo puerto
+cd C:\Proyectos\2026-01-TPI\m2-clientes
+docker compose --profile api up -d --build
+
+# Front (http://localhost:5173). Si ya corre npm run dev, cortalo antes
+cd ..\frontend
+docker build -t ghcr.io/frre-ds/m2-clientes-front:dev .
+docker run -d --name m2-front -p 5173:80 ghcr.io/frre-ds/m2-clientes-front:dev
+```
+
+- La API toma la configuración del `environment` de `m2-clientes/docker-compose.yml` (MongoDB por su nombre de servicio y Keycloak por `host.docker.internal`), no del `.env`.
+- El front lleva las URLs de la API y de Keycloak adentro del código compilado. Para otras, pasarlas al construir: `docker build --build-arg VITE_API_URL=http://... -t ... .` (las variables son las de `frontend/.env.example`).
+- `docker ps` muestra si cada contenedor está `healthy`. Para apagarlos: `docker compose --profile api down` en `m2-clientes` y `docker rm -f m2-front`.
 
 ### Para apagar todo
 
@@ -271,6 +301,11 @@ Siguen el contrato común [`contratos/m2_clientes/openapi.yml`](contratos/m2_cli
 | `DELETE` | `/api/v1/clientes/{clienteId}/direcciones/{direccionId}` | `CLIENTE` (la suya) | Elimina la dirección (`204`) |
 | `GET` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas), `OPERADOR` | Trae las preferencias; si nunca se guardaron, listas vacías |
 | `PUT` | `/api/v1/clientes/{clienteId}/preferencias` | `CLIENTE` (las suyas) | Reemplaza todas las preferencias |
+| `GET` | `/api/v1/clientes/{clienteId}/estado-cuenta` | `CLIENTE` (el suyo), `OPERADOR`, `SERVICIO` | `ACTIVO` o `BLOQUEADO` y los bloqueos vigentes. Es lo que consultan M5 y M9 |
+| `GET` | `/api/v1/clientes/{clienteId}/bloqueos` | `OPERADOR` | Historial paginado, más nuevos primero. Filtro opcional `vigente` |
+| `POST` | `/api/v1/clientes/{clienteId}/bloqueos` | `OPERADOR` | Bloquea al cliente (`motivo` y opcionalmente `hasta`). Exige `Idempotency-Key`. `422` si `hasta` ya pasó |
+| `GET` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Trae un bloqueo |
+| `PATCH` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Levanta el bloqueo (con `motivo`). `409` si ya no estaba vigente |
 
 Todos menos `/health` requieren `Authorization: Bearer <token>`. Los errores vuelven en formato `application/problem+json`, y toda respuesta trae `X-Request-Id`.
 
@@ -292,6 +327,7 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
 ```
 2026-01-TPI/
 ├── contratos/m2_clientes/    # Contrato OpenAPI común de M2 (acordado con el Grupo 17)
+├── docs/                     # Primeros pasos para el equipo y tablero de tareas (docs/tareas/)
 ├── keycloak/                 # Servidor de identidad (login y roles) + configuración del realm
 ├── frontend/                 # Front en React + Vite + Mantine (login con Keycloak)
 └── m2-clientes/              # Nuestro microservicio
@@ -306,7 +342,8 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
     ├── tests/                # Pruebas automáticas (pytest)
     ├── requirements.txt      # Librerías de Python
     ├── requirements-dev.txt  # Librerías para las pruebas
-    └── docker-compose.yml    # MongoDB local
+    ├── Dockerfile            # Imagen de la API (la del front está en frontend/Dockerfile)
+    └── docker-compose.yml    # MongoDB local y, con --profile api, la API en un contenedor
 ```
 
 ---

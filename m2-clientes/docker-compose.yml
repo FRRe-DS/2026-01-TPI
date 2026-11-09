@@ -1,3 +1,6 @@
+# MongoDB de M2 y, opcionalmente, la API en un contenedor.
+#   docker compose up -d                      → solo MongoDB (para correr la API con uvicorn, como siempre)
+#   docker compose --profile api up -d --build → MongoDB + la API en http://localhost:8000
 services:
   mongodb:
     image: mongo:7.0
@@ -5,6 +8,30 @@ services:
       - "27017:27017"
     volumes:
       - m2_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    profiles: ["api"]
+    build: .
+    image: ghcr.io/frre-ds/m2-clientes-api:dev
+    ports:
+      - "8000:8000"
+    environment:
+      # Dentro de Docker, "localhost" es el propio contenedor: MongoDB se llama por su nombre de servicio
+      MONGO_URL: mongodb://mongodb:27017
+      MONGO_DB: m2_clientes_db
+      # Keycloak corre en tu PC (publicado en el puerto 8080): desde el contenedor se llega por host.docker.internal
+      JWKS_URL: http://host.docker.internal:8080/realms/ds-2026-realm/protocol/openid-connect/certs
+      CORS_ORIGINS: http://localhost:5173
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
 volumes:
   m2_mongo_data:

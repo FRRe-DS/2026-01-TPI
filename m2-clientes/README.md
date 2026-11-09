@@ -3,8 +3,8 @@
 Microservicio de clientes de la plataforma de movilidad. Implementa el contrato común de M2,
 acordado entre el Grupo 1 y el Grupo 17: [`../contratos/m2_clientes/openapi.yml`](../contratos/m2_clientes/openapi.yml).
 
-Hoy cubre las **etapas 1 y 2**: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2) y preferencias (RF-2.3).
-Las demás partes del contrato (historial, calificaciones, estado de cuenta y bloqueos) vienen en las próximas etapas.
+Hoy cubre las **etapas 1 a 3**: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2), preferencias (RF-2.3)
+y estado de cuenta con bloqueos (RF-2.6). El historial y las calificaciones (con M6) vienen en la etapa 4.
 
 ## Cómo instalarlo y correrlo
 
@@ -48,7 +48,7 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 |---|---|
 | `main.py` | Arma la app: middleware, manejo de errores y rutas |
 | `rutas/comunes.py` | Lo que comparten las rutas: `Idempotency-Key`, paginación, búsqueda del perfil, fecha actual |
-| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py` | Endpoints, un archivo por recurso del contrato |
+| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py`, `estado_cuenta.py`, `bloqueos.py` | Endpoints, un archivo por recurso del contrato. `bloqueos.py` tiene también la regla de vigencia que usan el perfil y el estado de cuenta |
 | `models.py` | Modelos del perfil con los nombres y las reglas del contrato |
 | `security.py` | Validación del token y de los roles (`CLIENTE`, `OPERADOR`, `SERVICIO`) |
 | `errores.py` | Respuestas de error en formato `application/problem+json` (RFC 9457) |
@@ -58,7 +58,8 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 | `tests/` | Pruebas automáticas: de API (validan cada respuesta contra el contrato) y unitarias (`test_unitarias.py`, funciones sueltas sin HTTP) |
 | `requirements.txt` | Librerías de Python (usar Python 3.12 o 3.13) |
 | `requirements-dev.txt` | Librerías para las pruebas |
-| `docker-compose.yml` | MongoDB local |
+| `docker-compose.yml` | MongoDB local y, con `--profile api`, la API en un contenedor |
+| `Dockerfile`, `.dockerignore` | Imagen de la API: Python 3.13 slim, usuario sin privilegios, healthcheck contra `/health`. No copia el `.env` ni los tests |
 
 ## Decisiones de la etapa 1
 
@@ -66,7 +67,7 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
   no puede tener dos perfiles (un segundo `POST` da `409`).
 - **Roles exactos, en mayúsculas.** Se leen de `realm_access.roles` (Keycloak) y de un claim `roles` en la raíz,
   por si el formato que se acuerde para M1 (issue #9 del Grupo 17) los pone ahí.
-- **`estado` siempre `ACTIVO`** hasta la etapa 3, cuando se calcule a partir de los bloqueos vigentes.
+- **`estado`:** desde la etapa 3 se calcula a partir de los bloqueos vigentes (ver abajo).
 - **`Idempotency-Key` se exige en el `POST`**, pero todavía no se guarda: un reintento con la misma clave
   da `409` en vez de la respuesta original. Se completa en la etapa 5.
 - **Sin baja del perfil:** el contrato no la tiene (RF-2.1 pide crear, consultar y actualizar).
@@ -81,3 +82,20 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 - **`PUT` de preferencias reemplaza todo:** lo que no se manda (por ejemplo, las observaciones) se borra.
 - **Las fechas se recortan a milisegundos** antes de guardarlas, porque MongoDB no guarda más precisión;
   así lo que devuelve un `POST` es igual a lo que devuelve después un `GET`.
+
+## Decisiones de la etapa 3
+
+- **Bloqueos en su propia colección** (`bloqueos`, con el `clienteId` del bloqueado e índice por cliente y fecha).
+  Nunca se borran: levantar uno agrega `levantadoEn`, `levantadoPor` y `motivoLevantamiento`.
+- **`vigente` no se guarda, se calcula al leer:** un bloqueo está vigente si no fue levantado y no pasó su `hasta`.
+  Así uno con fecha de fin vence solo, sin un proceso que lo actualice.
+- **`estado` del cliente:** `BLOQUEADO` si tiene al menos un bloqueo vigente; si no, `ACTIVO`. Se calcula igual en el
+  estado de cuenta y en el perfil. Puede tener varios bloqueos a la vez (por motivos distintos).
+- **`desde` es el momento en que se registra:** el contrato no deja elegir el inicio.
+- **`hasta` tiene que venir con zona horaria** (si no, `400`) y ser futura (si no, `422` con
+  `type: /errores/fin-de-bloqueo-pasado`). Se guarda en UTC y con milisegundos.
+- **Solo se levanta lo vigente:** uno ya levantado o ya vencido da `409` (`type: /errores/bloqueo-no-vigente`).
+  La actualización es condicional, así que si dos operadores lo levantan a la vez, uno recibe `409`.
+- **Un bloqueo de otro cliente da `404`** para la ruta pedida, igual que las direcciones.
+- **`SERVICIO` solo entra al estado de cuenta.** Su `sub` nombra al módulo, así que no se aplica la regla de dueño.
+- **`Idempotency-Key` en `crearBloqueo`:** se exige, pero un reintento crea otro bloqueo. Se completa en la etapa 5.

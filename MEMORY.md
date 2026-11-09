@@ -3,13 +3,19 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Estado actual
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
-- Ramas: las etapas se integran en `desarrollo-m2` (sale de `main`); al terminar las 5 etapas, un único PR a `main`. Se mergea con merge commit.
-- Etapa 1 (perfil, `/health`, roles, problem+json, `X-Request-Id`, `.env`) + `AGENTS.md` y `MEMORY.md`: PR #2, mergeado en `desarrollo-m2`. Probada en real el 21/10.
-- Etapa 2 (direcciones y preferencias, RF-2.2 y RF-2.3): PR #3, mergeado en `desarrollo-m2`. README actualizado (PR #4); probada en real el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR): todo OK.
-- Pruebas: 153 casos = 105 de API + 48 unitarias (`test_unitarias.py`, en `desarrollo-m2` el 22/10). Las de API no son unitarias: prueban la app entera con base y tokens simulados.
-- Rama `feature/pantalla-bienvenida` (22/10): el front ya no fuerza el login; muestra una bienvenida propia con Crear cuenta / Ingresar que llevan a Keycloak. Crear cuenta requiere activar el registro y el rol por defecto CLIENTE en el realm (a mano, no está en el JSON).
-- Pendiente de otros: M5 (grupos 4 y 13) no confirmó si le alcanza con `obtenerEstadoCuenta`; formato del token de M1 abierto en el issue #9 de `2026-17-TPI`; M6 sin contrato.
-- M9 firma sus tokens de SERVICIO con HS256 y una clave compartida mientras M1 sea simulado (issue #9, 20/10). Hoy solo aceptamos RS256 por JWKS: hay que soportarlo por configuración antes o durante la etapa 3.
+- Ramas: las etapas se integran en `desarrollo-m2`; `main` recibió todo lo hecho hasta el 22/10 (PR #6). Lo que sigue va a `desarrollo-m2` y después otro merge a `main`. Siempre merge commit.
+- Etapas 1 (perfil, PR #2) y 2 (direcciones y preferencias, PR #3): probadas en real el 21 y el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR).
+- Etapa 3 (estado de cuenta y bloqueos, RF-2.6) + aviso de cuenta bloqueada en el front: PR #8, mergeado en `desarrollo-m2`. Probada en real el 7/11 (bloquear y levantar desde Swagger como OPERADOR, aviso en el front): todo OK.
+- CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
+- Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados en la PC el 7/11 con Docker Desktop (API + MongoDB con `--profile api`, front en `5173:80`): todo OK, incluida la prueba de bloqueos.
+- Pruebas: 214 casos = 157 de API + 57 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
+- **Trabajo en equipo (8/11):** somos 9 (Lucas + 8 con poca experiencia, se ayudan con IA). Presentación el jue 19/11: cada uno explica qué hizo y cómo, sin ir línea por línea. Lo que falta está dividido en T01–T08 (equipo) y L1–L2 (Lucas), con guías en `docs/tareas/` y el tablero de responsables y estados en `docs/tareas/README.md`, que es el registro de quién hace qué. Guía de inicio: `docs/primeros-pasos.md`. Copia del plan en el proyecto de claude.ai (`claude/tareas-equipo.md`).
+- Pantalla de bienvenida (PR #5). Crear cuenta requiere el registro y el rol por defecto CLIENTE en el realm.
+- **Keycloak de la cátedra (3/11):** `FRRe-DS/2026-TPI/keycloak`, realm `ds-2026-realm` con roles por módulo (`clientes-be`…), scopes `clientes:read/write` sin asignar a nadie, sin roles de persona ni `aud`. El profe: `grupo-01` es nuestra aplicación y los usuarios se crean asociados a ella; los scopes de M2 los definimos con el Grupo 17.
+- **Contrato (commit 360caad del profe):** agregó `OAuth2Bearer` con scopes. Errores a corregir en un PR conjunto: `cleintes` → `clientes`, `tokenUrl` (`/protocol/openid-connect/token`) y rol + scope en el mismo renglón de `security` (si no, son alternativas).
+- **Issue #7 de nuestro repo (Grupo 17, 7/11):** acordando roles + scopes, PR de corrección, realm de desarrollo común del Grupo 17 (roles, audiencia `m2-clientes`, scopes, usuarios) y mantener `/health`. Respondimos de acuerdo y propusimos `clientes.estado:read` para M5 y M9. Esperando respuesta.
+- Otros módulos: M5 sin contrato. M6 publicó el suyo (roles `CLIENT`/`SYSTEM`, distintos de los nuestros). M9 lo publicó el 6/11: rechaza reservas con `CLIENTE_NO_HABILITADO` según nuestro estado de cuenta.
+- M9 iba a firmar con HS256 mientras M1 fuera simulado (issue #9, 20/10). Ahora la cátedra da Keycloak con cuentas `grupo-NN` (RS256): confirmar con M9 antes de agregar HS256.
 
 ## Aprendizajes y errores a evitar
 - Verificar contra la consigna textual (README de `FRRe-DS/2026-TPI`) antes de marcar algo como "falta":
@@ -29,17 +35,17 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **Adoptamos el contrato del Grupo 17:** cumple todos los RF y resuelve mejor los RNF-03, 09, 13 y 14. Además, RNF-02 pide dos implementaciones por módulo con el mismo contrato.
 - **`clienteId` = `sub`, usado como `_id` en MongoDB:** lo pide el contrato y garantiza un solo perfil por usuario.
 - **Roles en `realm_access.roles` y en un claim `roles` en la raíz:** sirve con Keycloak y con lo que se acuerde en el #9.
-- **`estado` siempre `ACTIVO`** hasta la etapa 3; el `Idempotency-Key` se exige pero no se guarda hasta la etapa 5.
+- **Bloqueos (etapa 3):** colección propia; `vigente` se calcula al leer (no levantado y sin pasar `hasta`); `estado` = `BLOQUEADO` si hay alguno vigente. Levantar uno ya levantado o vencido da 409 (lo eligió el usuario). El panel de operador en el front queda para cuando haya usuarios OPERADOR.
+- **`Idempotency-Key`** se exige pero no se guarda hasta la etapa 5.
 - **Una sola base: MongoDB** (confirmado por el usuario el 22/10). Se descartó MySQL; Redis y RabbitMQ quedan para el TP2.
 - **Direcciones en su propia colección; preferencias dentro del perfil:** las direcciones se paginan y editan de a una; las preferencias son 1 a 1.
 - **`main.py` dividido en `rutas/`** (un archivo por recurso): crece con cada etapa.
 - **Listado de direcciones: más nuevas primero** (el contrato no fija orden). Una dirección de otro cliente da 404.
 - **No tocamos el realm** (`keycloak/`): es de Matías; los pasos manuales están en el README.
-- **Trabajo por etapas en `desarrollo-m2`:** el usuario prefiere integrar todo ahí y mergear a `main` una sola vez al final.
+- **Trabajo por etapas en `desarrollo-m2`:** cada etapa se integra ahí y después pasa a `main` con un PR.
 
 ## Próximos pasos
-1. Etapa 3 desde `desarrollo-m2`. Ojo: `test_token_hs256_hoy_no_se_acepta` fija que hoy se rechaza HS256; cambiarla al soportar los tokens de M9.
-2. Etapa 3: estado de cuenta y bloqueos (SERVICIO solo en `obtenerEstadoCuenta`, `estado` calculado, aceptar tokens HS256 de M9).
-3. Etapa 4: calificaciones e historial con un mock de M6 (2 s, 1 reintento en GET, 503).
-4. Etapa 5: idempotencia real (guardar clave, hash del cuerpo y respuesta).
-5. Seguir el issue #9 (token de M1) y la respuesta de M5.
+1. Lun 9/11: reunión de arranque y asignar responsables en el tablero (`docs/tareas/README.md`).
+2. Calendario: mié 11 entorno listo; vie 13 T01, T06 y `obtener_viaje` de T02 mergeados; lun 16 todos los PR; mar 17 todo en `desarrollo-m2`; mié 18 merge a `main` y ensayo; jue 19 presentación.
+3. Lucas (L1): el Grupo 17 respondió (8/11) y armó el cambio del contrato (su PR #95); ellos abren el PR a la cátedra y nosotros lo aprobamos. Diferencias con lo nuestro: `obtenerEstadoCuenta` pide `clientes.estado:read` a todos, `503` si no se puede bajar el JWKS (hoy damos 401), `aud` fuera del contrato. Después: implementar scopes, el 503 y `aud` por configuración en `security.py`; idempotencia (etapa 5).
+4. Lucas (L2): revisar PR, mensajes al profe, al consorcio y recordatorio a sando; seguir el issue #7 y a M5 y M9.

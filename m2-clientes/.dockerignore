@@ -1,0 +1,11 @@
+# Lo que no entra en la imagen de la API
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+.env
+docker-compose.yml
+Dockerfile
+.dockerignore
+README.md

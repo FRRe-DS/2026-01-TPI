@@ -27,6 +27,7 @@ def base_en_memoria(monkeypatch):
     db = mongo["test"]
     monkeypatch.setattr(database, "coleccion_clientes", lambda: db["clientes"])
     monkeypatch.setattr(database, "coleccion_direcciones", lambda: db["direcciones"])
+    monkeypatch.setattr(database, "coleccion_bloqueos", lambda: db["bloqueos"])
     monkeypatch.setattr(database, "base_disponible", lambda: True)
     monkeypatch.setattr(security, "obtener_clave", lambda token: _CLAVE_PUBLICA)
     return db
