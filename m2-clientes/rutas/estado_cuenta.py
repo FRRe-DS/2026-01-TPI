@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends
 from models import EstadoCliente, EstadoCuenta
 from rutas.bloqueos import a_bloqueo, bloqueos_vigentes
 from rutas.comunes import a_json, ahora, buscar_perfil_o_404
-from security import CLIENTE, OPERADOR, SERVICIO, Usuario, requiere_roles, verificar_dueno
+from security import CLIENTE, LEER_ESTADO, OPERADOR, SERVICIO, Usuario, requiere_roles, verificar_dueno
 
 router = APIRouter(prefix="/api/v1/clientes/{clienteId}/estado-cuenta", tags=["Estado de cuenta"])
 
 
 @router.get("", operation_id="obtenerEstadoCuenta")
 def obtener_estado_cuenta(clienteId: UUID,
-                          usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, SERVICIO))):
+                          usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, SERVICIO, scope=LEER_ESTADO))):
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)  # el CLIENTE solo ve el suyo; OPERADOR y SERVICIO, cualquiera
     buscar_perfil_o_404(cliente_id)

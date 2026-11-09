@@ -40,7 +40,7 @@ Abrir http://localhost:5173: si no hay sesión, muestra la pantalla de bienvenid
 frontend/
 ├── index.html                 # página base
 ├── vite.config.js             # configuración de Vite (puerto 5173)
-├── .env.example               # URLs configurables (RNF-06)
+├── .env.example               # URLs y scopes configurables (RNF-06)
 ├── Dockerfile                 # imagen: compila con Node y sirve dist/ con nginx
 ├── nginx.conf                 # nginx: index.html para cualquier ruta y caché larga de assets/
 └── src/

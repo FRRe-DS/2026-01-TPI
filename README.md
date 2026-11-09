@@ -98,7 +98,8 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
 - [x] Imágenes Docker de la API y del front (`Dockerfile` en `m2-clientes/` y en `frontend/`): sin root, con healthcheck y etiquetas OCI. La API se puede levantar junto a MongoDB con `docker compose --profile api up -d` (RNF-04)
 - [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
-- [x] Pruebas automáticas (RNF-07), 214 casos: de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, paginación, fechas, modelos, vigencia de los bloqueos)
+- [x] Pruebas automáticas (RNF-07), 280 casos (y 4 más que se activan con la etapa 4): de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, scopes, paginación, fechas, modelos, vigencia de los bloqueos)
+- [x] Scopes del contrato acordados con el Grupo 17 (FRRe-DS/2026-TPI#18): cada operación pide rol y scope juntos, configurable con `EXIGIR_SCOPES` (apagado mientras los Keycloak no emitan los scopes); audiencia opcional (`JWT_AUDIENCE`); `503` si M1 no responde (RNF-12)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
 - [x] **Etapa 3 del contrato:** estado de cuenta (para el cliente, el operador y los módulos con rol `SERVICIO`, como M5 y M9) y bloqueos administrativos: el operador los registra, con fecha de fin opcional, y los levanta; nunca se borran (RF-2.6). El front avisa al cliente si su cuenta está bloqueada
@@ -244,7 +245,7 @@ python -m pytest
 
 Hay dos tipos:
 
-- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`, `test_bloqueos.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
+- **De API** (`test_perfil.py`, `test_direcciones.py`, `test_preferencias.py`, `test_bloqueos.py`, `test_seguridad.py`): mandan pedidos a la aplicación completa y verifican cada respuesta contra los esquemas del contrato.
 - **Unitarias** (`test_unitarias.py`): prueban funciones sueltas, sin HTTP: lectura de roles del token, regla de dueño, paginación, fechas, `X-Request-Id`, reglas de los modelos y vigencia de los bloqueos.
 
 Las mismas pruebas, más el build del front, corren solas en GitHub en cada push y en cada PR (pestaña **Actions** del repo, o el tilde ✔/✖ al lado de cada commit).

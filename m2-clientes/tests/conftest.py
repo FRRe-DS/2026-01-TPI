@@ -39,12 +39,17 @@ def cliente_http():
     return TestClient(app, raise_server_exceptions=False)
 
 
-def token(roles, sub=None, vence_en=300):
+def token(roles, sub=None, vence_en=300, scope=None, aud=None):
+    """Token firmado con la clave de prueba. `scope` es el texto del claim (por ejemplo "clientes:read")."""
     payload = {
         "sub": sub or str(uuid.uuid4()),
         "realm_access": {"roles": list(roles)},
         "exp": int(time.time()) + vence_en,
     }
+    if scope is not None:
+        payload["scope"] = scope
+    if aud is not None:
+        payload["aud"] = aud
     return jwt.encode(payload, _CLAVE_PRIVADA, algorithm="RS256")
 
 

@@ -29,7 +29,8 @@ El **realm** es el "espacio" de Keycloak donde viven los usuarios y los roles de
    - en *Realm settings → Login*, **User registration: On**, así funciona "Crear cuenta" del front;
    - en *Realm settings → User registration → Default roles*, agregá `CLIENTE`, así los que se registran solos son clientes;
    - el rol `SERVICIO` también para la cuenta de servicio `grupo-01`, así se puede probar como si fuera M5 o M9;
-   - *Realm settings → Tokens → Access Token Lifespan* en 1 hora, para que en las pruebas no venza a cada rato.
+   - *Realm settings → Tokens → Access Token Lifespan* en 1 hora, para que en las pruebas no venza a cada rato;
+   - (opcional, si te da el tiempo) los **client scopes** `clientes:read`, `clientes:write` y `clientes.estado:read` asignados como opcionales al cliente `m2-frontend`, y un mapper de audiencia `m2-clientes`. Con eso, la API se puede correr con `EXIGIR_SCOPES=true` y `JWT_AUDIENCE=m2-clientes`, y el front con `VITE_KEYCLOAK_SCOPE`. Coordinalo con Lucas.
 2. **Exportá el realm** desde el contenedor, con usuarios incluidos:
    ```powershell
    docker exec -it <nombre-del-contenedor-keycloak> /opt/keycloak/bin/kc.sh export --dir /tmp/export --realm ds-2026-realm --users realm_file

@@ -12,10 +12,10 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 
 | Ruta | Qué es |
 |---|---|
-| `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del publicado en la cátedra (`FRRe-DS/2026-TPI`, PR #5). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
+| `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del de la cátedra (`FRRe-DS/2026-TPI`): PR #5 y, con los scopes, PR #18 (aprobado por los dos grupos el 9/11). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
 | `m2-clientes/main.py` | Arma la app: middleware, manejadores de errores y routers. |
 | `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3. |
-| `m2-clientes/security.py` | Validación del token (JWKS de M1), lectura de roles, `requiere_roles` y `verificar_dueno`. |
+| `m2-clientes/security.py` | Validación del token (JWKS de M1, audiencia opcional), lectura de roles y scopes, `requiere_roles(*roles, scope=...)` y `verificar_dueno`. |
 | `m2-clientes/errores.py` | Errores en formato `application/problem+json` y todos los manejadores de excepciones. |
 | `m2-clientes/middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`). |
 | `m2-clientes/config.py` | Toda la configuración, leída de variables de entorno o de `.env` (ver `.env.example`). |
@@ -79,6 +79,7 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 - **El contrato es compartido con el Grupo 17.** No se agregan, renombran ni sacan rutas, campos, roles ni códigos de respuesta por cuenta propia. Cualquier cambio se acuerda primero con ellos (en un PR de `FRRe-DS/2026-17-TPI`) y después se publica en la cátedra. Si una operación necesita algo que el contrato no tiene, parar y avisar.
 - **Solo se devuelven los códigos que el contrato declara para cada operación.** Hay un test que lo verifica; al agregar una operación, sumala al `test_codigos_usados_estan_en_el_contrato` de su archivo de pruebas.
 - **`clienteId` = `sub` del token, pero solo en tokens de CLIENTE.** En los de SERVICIO, el `sub` es el nombre del módulo (por ejemplo `m9-reservas`). En MongoDB, el `clienteId` es el `_id` del perfil.
+- **Rol y scope juntos (contrato FRRe-DS/2026-TPI#18):** cada endpoint usa `requiere_roles(ROLES..., scope=LEER | ESCRIBIR | LEER_ESTADO)` con el mismo rol y scope que el `security` de su operación. Lecturas `clientes:read`, escrituras `clientes:write`, y `obtenerEstadoCuenta` `clientes.estado:read` (solo esa). `test_seguridad.py` compara cada ruta con el contrato. El scope se exige solo con `EXIGIR_SCOPES=true` (apagado por defecto mientras los Keycloak no emitan los scopes); declararlo es obligatorio igual. La audiencia se verifica solo si `JWT_AUDIENCE` tiene valor. Si no se pueden bajar las claves de M1, `503` (no `401`).
 - **Roles exactos, en mayúsculas:** `CLIENTE`, `CONDUCTOR`, `OPERADOR`, `SERVICIO`. `SERVICIO` solo se admite en `obtenerEstadoCuenta` (lo usan M5 y M9); en cualquier otra operación da `403`. El realm de Keycloak trae `Cliente`, `Conductor` y `Operador`, que **no** sirven: hay que crear los roles en mayúsculas a mano (paso 3b2 del README).
 - **Errores:**
   - Los genéricos usan `type: about:blank` y un `title` fijo en español (ver `TITULOS` en `errores.py`); el 403 es "Sin permiso".
