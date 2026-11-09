@@ -12,7 +12,7 @@ from errores import ErrorDominio
 from models import Cliente, ClienteCambios, ClienteNuevo, EstadoCliente
 from rutas.bloqueos import estado_del_cliente
 from rutas.comunes import IdempotencyKey, a_json, ahora, buscar_perfil_o_404
-from security import CLIENTE, OPERADOR, Usuario, requiere_roles, verificar_dueno
+from security import CLIENTE, ESCRIBIR, LEER, OPERADOR, Usuario, requiere_roles, verificar_dueno
 
 router = APIRouter(prefix="/api/v1/clientes", tags=["Perfil"])
 
@@ -35,7 +35,7 @@ def a_cliente(doc: dict, estado: EstadoCliente) -> Cliente:
 def crear_cliente(
     datos: ClienteNuevo,
     idempotency_key: IdempotencyKey,
-    usuario: Usuario = Depends(requiere_roles(CLIENTE)),
+    usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR)),
 ):
     """Crea el perfil del cliente cuyo clienteId es el sub del token. Si ya existe, 409."""
     # Por ahora la Idempotency-Key solo se exige: un segundo intento devuelve 409 (etapa 5).
@@ -62,7 +62,7 @@ def crear_cliente(
 
 @router.get("/{clienteId}", operation_id="obtenerCliente",
             response_model=Cliente, response_model_exclude_none=True)
-def obtener_cliente(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR))):
+def obtener_cliente(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, scope=LEER))):
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)
     return a_json(a_cliente(buscar_perfil_o_404(cliente_id), estado_del_cliente(cliente_id)))
@@ -71,7 +71,7 @@ def obtener_cliente(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(C
 @router.patch("/{clienteId}", operation_id="actualizarCliente",
               response_model=Cliente, response_model_exclude_none=True)
 def actualizar_cliente(clienteId: UUID, cambios: ClienteCambios,
-                       usuario: Usuario = Depends(requiere_roles(CLIENTE))):
+                       usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR))):
     """Actualiza solo los campos enviados."""
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)

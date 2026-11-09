@@ -40,6 +40,8 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 | `MONGO_TIMEOUT_MS` | Cuánto se espera a la base antes de responder `503` | `2000` |
 | `JWKS_URL` | Claves públicas de M1 para validar el token | Keycloak local, realm `ds-2026-realm` |
 | `JWT_ISSUER` | Emisor esperado del token (vacío = no se verifica) | vacío |
+| `JWT_AUDIENCE` | Audiencia esperada del token (`aud`; vacío = no se verifica). Con un realm que la emita: `m2-clientes` | vacío |
+| `EXIGIR_SCOPES` | Exigir el scope de cada operación, como dice el contrato. Activarlo solo con un Keycloak que emita `clientes:read`, `clientes:write` y `clientes.estado:read` | `false` |
 | `CORS_ORIGINS` | Orígenes del front, separados por coma | `http://localhost:5173` |
 
 ## Archivos
@@ -99,3 +101,22 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 - **Un bloqueo de otro cliente da `404`** para la ruta pedida, igual que las direcciones.
 - **`SERVICIO` solo entra al estado de cuenta.** Su `sub` nombra al módulo, así que no se aplica la regla de dueño.
 - **`Idempotency-Key` en `crearBloqueo`:** se exige, pero un reintento crea otro bloqueo. Se completa en la etapa 5.
+
+## Seguridad: scopes, audiencia y M1 (contrato del 9/11)
+
+El contrato con scopes lo acordamos con el Grupo 17 (issue #7) y está en FRRe-DS/2026-TPI#18.
+
+- **Rol y scope juntos:** cada operación declara en `requiere_roles(..., scope=...)` el mismo rol y scope que
+  su renglón de `security`. Las lecturas piden `clientes:read`, las escrituras `clientes:write` y
+  `obtenerEstadoCuenta` pide `clientes.estado:read` a todos (CLIENTE, OPERADOR y SERVICIO). Ese scope no
+  sirve para nada más: es el que reciben M5 y M9 (RNF-19). El parámetro `scope` es obligatorio, y una prueba
+  compara cada ruta con el contrato.
+- **`EXIGIR_SCOPES` apagado por defecto:** el Keycloak local y el de la cátedra todavía no emiten esos scopes.
+  Si se exigieran, todo daría `403`. Se activa cuando el realm los tenga (tarea T06 o el realm del Grupo 17).
+- **Audiencia por configuración:** el contrato no la fija. Con `JWT_AUDIENCE=m2-clientes`, un token sin esa
+  audiencia da `401`.
+- **M1 caído da `503`, no `401`:** si no se pueden bajar las claves (JWKS), el token puede estar bien, así que
+  se responde `503` con `Retry-After`. Si M1 responde pero el token no coincide con ninguna clave, sigue
+  siendo `401`.
+- **El front** pide los scopes solo si se configura `VITE_KEYCLOAK_SCOPE`: un Keycloak que no los tiene
+  rechaza el inicio de sesión.

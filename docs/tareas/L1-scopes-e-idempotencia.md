@@ -16,15 +16,17 @@ Acordado con el Grupo 17 en el issue #7 (8/11). El cambio del contrato es su PR 
 - La audiencia (`aud`) no está en el contrato: es configuración de cada M2, con `m2-clientes` por defecto (confirmado por el Grupo 17 el 9/11).
 
 Pasos:
-1. Aprobar el PR FRRe-DS/2026-TPI#18, que abrió el Grupo 17 con el mismo diff que su #95.
-2. Cuando la cátedra lo mergee, actualizar la copia `contratos/m2_clientes/openapi.yml`.
-3. En `security.py`:
-   - leer el claim `scope`, que es un texto separado por espacios;
-   - una dependencia que exija rol **y** scope, con el scope de cada operación como dice el contrato;
-   - si falla la descarga de las claves (JWKS), responder `503` con `Retry-After`, no `401`;
-   - verificar `aud` (`m2-clientes`) por configuración (`JWT_AUDIENCE`), apagado por defecto mientras el Keycloak de la cátedra no lo tenga.
-4. Pruebas: tokens sin scope, con el scope equivocado y sin audiencia.
-5. Coordinar con T06 que el realm tenga los scopes asignados: `clientes:read`, `clientes:write` y `clientes.estado:read` al cliente del front; `clientes.estado:read` a las cuentas de M5 y M9. El realm de desarrollo del Grupo 17 ya tiene un cliente público `m2-front` con PKCE.
+1. ✔ PR FRRe-DS/2026-TPI#18 aprobado por el Grupo 1 (9/11). Falta el merge de la cátedra.
+2. ✔ Copia `contratos/m2_clientes/openapi.yml` actualizada con el archivo del PR #18 (sin esperar el merge: el contenido está acordado; si la cátedra pide cambios, se vuelve a copiar).
+3. ✔ En `security.py` (rama `feature/l1-scopes`):
+   - se lee el claim `scope` (texto separado por espacios);
+   - `requiere_roles(*roles, scope=...)` exige rol **y** scope; el scope es obligatorio en cada ruta;
+   - los scopes se exigen solo con `EXIGIR_SCOPES=true` (apagado por defecto mientras los Keycloak no los emitan);
+   - si falla la descarga de las claves (JWKS), `503` con `Retry-After`;
+   - `aud` se verifica solo si `JWT_AUDIENCE` tiene valor.
+4. ✔ Pruebas (`tests/test_seguridad.py`): cada ruta comparada con el contrato, sin el scope `403`, con el scope pasa, `clientes.estado:read` no abre nada más, audiencia y `503` de M1.
+5. Pendiente: activar `EXIGIR_SCOPES` y `JWT_AUDIENCE` cuando usemos un realm con scopes y audiencia (T06 o el del Grupo 17), y configurar `VITE_KEYCLOAK_SCOPE` en el front.
+6. Coordinar con T06 que el realm tenga los scopes asignados: `clientes:read`, `clientes:write` y `clientes.estado:read` al cliente del front; `clientes.estado:read` a las cuentas de M5 y M9. El realm de desarrollo del Grupo 17 ya tiene un cliente público `m2-front` con PKCE.
 
 ## L1b · Idempotencia (etapa 5, RNF-09)
 

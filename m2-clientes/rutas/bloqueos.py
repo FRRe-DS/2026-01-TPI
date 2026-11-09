@@ -19,7 +19,7 @@ import database
 from errores import ErrorDominio
 from models import Bloqueo, BloqueoNuevo, EstadoCliente, LevantamientoBloqueo
 from rutas.comunes import IdempotencyKey, Page, Size, a_json, ahora, buscar_perfil_o_404, no_encontrado, paginar
-from security import OPERADOR, Usuario, requiere_roles
+from security import ESCRIBIR, LEER, OPERADOR, Usuario, requiere_roles
 
 router = APIRouter(prefix="/api/v1/clientes/{clienteId}/bloqueos", tags=["Estado de cuenta"])
 
@@ -96,7 +96,7 @@ def listar_bloqueos(
     vigente: bool | None = None,
     page: Page = 0,
     size: Size = 20,
-    usuario: Usuario = Depends(requiere_roles(OPERADOR)),
+    usuario: Usuario = Depends(requiere_roles(OPERADOR, scope=LEER)),
 ):
     """Historial de bloqueos del cliente; con `vigente` se filtran los vigentes o los que ya no lo están."""
     cliente_id = str(clienteId)
@@ -116,7 +116,7 @@ def crear_bloqueo(
     clienteId: UUID,
     datos: BloqueoNuevo,
     idempotency_key: IdempotencyKey,
-    usuario: Usuario = Depends(requiere_roles(OPERADOR)),
+    usuario: Usuario = Depends(requiere_roles(OPERADOR, scope=ESCRIBIR)),
 ):
     # Por ahora la Idempotency-Key solo se exige: evitar el duplicado en un reintento queda para la etapa 5.
     cliente_id = str(clienteId)
@@ -142,7 +142,7 @@ def crear_bloqueo(
 
 
 @router.get("/{bloqueoId}", operation_id="obtenerBloqueo")
-def obtener_bloqueo(clienteId: UUID, bloqueoId: UUID, usuario: Usuario = Depends(requiere_roles(OPERADOR))):
+def obtener_bloqueo(clienteId: UUID, bloqueoId: UUID, usuario: Usuario = Depends(requiere_roles(OPERADOR, scope=LEER))):
     cliente_id = str(clienteId)
     buscar_perfil_o_404(cliente_id)
     return a_json(a_bloqueo(_buscar_bloqueo_o_404(cliente_id, str(bloqueoId))))
@@ -150,7 +150,7 @@ def obtener_bloqueo(clienteId: UUID, bloqueoId: UUID, usuario: Usuario = Depends
 
 @router.patch("/{bloqueoId}", operation_id="levantarBloqueo")
 def levantar_bloqueo(clienteId: UUID, bloqueoId: UUID, datos: LevantamientoBloqueo,
-                     usuario: Usuario = Depends(requiere_roles(OPERADOR))):
+                     usuario: Usuario = Depends(requiere_roles(OPERADOR, scope=ESCRIBIR))):
     """No borra el bloqueo: registra quién, cuándo y por qué lo levantó."""
     cliente_id, bloqueo_id = str(clienteId), str(bloqueoId)
     buscar_perfil_o_404(cliente_id)

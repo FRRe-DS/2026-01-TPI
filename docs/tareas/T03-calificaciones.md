@@ -36,6 +36,7 @@ Es como la encuesta del final de una compra: solo te la mandan si la compra se e
 
    Agregá la colección al fixture `base_en_memoria` de `tests/conftest.py`. Cambiar cómo se guardan los datos requiere el OK de Lucas: mostrale el diseño antes.
 3. **Rutas** en `rutas/calificaciones.py`:
+   - Cada ruta lleva el scope del contrato en `requiere_roles` (es obligatorio): `scope=ESCRIBIR` en el `POST` y `scope=LEER` en los dos `GET`. `tests/test_seguridad.py` controla que coincidan.
    - **`POST`** (solo `CLIENTE`, con `verificar_dueno`, perfil existente e `Idempotency-Key`):
      1. `viaje = m6.obtener_viaje(viajeId, autorizacion)`;
      2. si devuelve `None`, responde `404`;
