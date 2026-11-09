@@ -13,10 +13,10 @@ Acordado con el Grupo 17 en el issue #7 (8/11). El cambio del contrato es su PR 
 - Lecturas con `clientes:read`, escrituras con `clientes:write`. Los bloqueos, con esos mismos scopes + OPERADOR.
 - `obtenerEstadoCuenta` pide **`clientes.estado:read` a todos** (CLIENTE, OPERADOR y SERVICIO). Ese scope no da acceso a nada más. Los tokens de las personas también lo tienen que traer.
 - Si M2 no puede obtener de M1 la clave pública del token, responde **`503`** (hoy responde `401`).
-- La audiencia (`aud`) no está en el contrato: queda como configuración de cada M2 (consultado en el issue #7).
+- La audiencia (`aud`) no está en el contrato: es configuración de cada M2, con `m2-clientes` por defecto (confirmado por el Grupo 17 el 9/11).
 
 Pasos:
-1. Aprobar el PR que el Grupo 17 abre en `FRRe-DS/2026-TPI` (mismo diff que su #95).
+1. Aprobar el PR FRRe-DS/2026-TPI#18, que abrió el Grupo 17 con el mismo diff que su #95.
 2. Cuando la cátedra lo mergee, actualizar la copia `contratos/m2_clientes/openapi.yml`.
 3. En `security.py`:
    - leer el claim `scope`, que es un texto separado por espacios;
