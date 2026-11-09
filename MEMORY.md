@@ -46,6 +46,6 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 
 ## Próximos pasos
 1. Lun 9/11: reunión de arranque y asignar responsables en el tablero (`docs/tareas/README.md`).
-2. Calendario: mié 11 entorno listo; vie 13 T01, T06 y `obtener_viaje` de T02 mergeados; lun 16 todos los PR; mar 17 todo en `desarrollo-m2`; mié 18 merge a `main` y ensayo; jue 19 presentación.
-3. Lucas (L1): el Grupo 17 respondió (8/11) y armó el cambio del contrato (su PR #95); ellos abren el PR a la cátedra y nosotros lo aprobamos. Diferencias con lo nuestro: `obtenerEstadoCuenta` pide `clientes.estado:read` a todos, `503` si no se puede bajar el JWKS (hoy damos 401), `aud` fuera del contrato. Después: implementar scopes, el 503 y `aud` por configuración en `security.py`; idempotencia (etapa 5).
+2. Calendario (tentativo, solo la presentación es fija): mié 11 entorno listo; vie 13 T01, T06 y `obtener_viaje` de T02 mergeados; lun 16 todos los PR; mar 17 todo en `desarrollo-m2`; mié 18 merge a `main` y ensayo; jue 19 presentación.
+3. Lucas (L1): contrato con scopes en el PR FRRe-DS/2026-TPI#18 (abierto por el Grupo 17 el 9/11, idéntico a su #95 que revisamos; falta nuestra aprobación y el merge de la cátedra). `aud` queda como configuración de cada M2 (G17: `m2-clientes` por defecto; su `m2-front` pide los tres scopes). Diferencias con lo nuestro: `obtenerEstadoCuenta` pide `clientes.estado:read` a todos, `503` si no se puede bajar el JWKS (hoy damos 401), `aud` fuera del contrato. Después: implementar scopes, el 503 y `aud` por configuración en `security.py`; idempotencia (etapa 5).
 4. Lucas (L2): revisar PR, mensajes al profe, al consorcio y recordatorio a sando; seguir el issue #7 y a M5 y M9.
