@@ -11,7 +11,7 @@ from pymongo import DESCENDING
 import database
 from models import Direccion, DireccionCambios, DireccionNueva, TipoDireccion
 from rutas.comunes import IdempotencyKey, Page, Size, a_json, ahora, buscar_perfil_o_404, no_encontrado, paginar
-from security import CLIENTE, OPERADOR, Usuario, requiere_roles, verificar_dueno
+from security import CLIENTE, ESCRIBIR, LEER, OPERADOR, Usuario, requiere_roles, verificar_dueno
 
 router = APIRouter(prefix="/api/v1/clientes/{clienteId}/direcciones", tags=["Direcciones"])
 
@@ -50,7 +50,7 @@ def listar_direcciones(
     tipo: TipoDireccion | None = None,
     page: Page = 0,
     size: Size = 20,
-    usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR)),
+    usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, scope=LEER)),
 ):
     cliente_id = str(clienteId)
     _preparar(cliente_id, usuario)
@@ -66,7 +66,7 @@ def crear_direccion(
     clienteId: UUID,
     datos: DireccionNueva,
     idempotency_key: IdempotencyKey,
-    usuario: Usuario = Depends(requiere_roles(CLIENTE)),
+    usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR)),
 ):
     cliente_id = str(clienteId)
     _preparar(cliente_id, usuario)
@@ -83,7 +83,7 @@ def crear_direccion(
 
 @router.get("/{direccionId}", operation_id="obtenerDireccion")
 def obtener_direccion(clienteId: UUID, direccionId: UUID,
-                      usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR))):
+                      usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, scope=LEER))):
     cliente_id = str(clienteId)
     _preparar(cliente_id, usuario)
     return a_json(a_direccion(_buscar_direccion_o_404(cliente_id, str(direccionId))))
@@ -91,7 +91,7 @@ def obtener_direccion(clienteId: UUID, direccionId: UUID,
 
 @router.patch("/{direccionId}", operation_id="actualizarDireccion")
 def actualizar_direccion(clienteId: UUID, direccionId: UUID, cambios: DireccionCambios,
-                         usuario: Usuario = Depends(requiere_roles(CLIENTE))):
+                         usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR))):
     """Actualiza solo los campos enviados."""
     cliente_id, direccion_id = str(clienteId), str(direccionId)
     _preparar(cliente_id, usuario)
@@ -105,7 +105,7 @@ def actualizar_direccion(clienteId: UUID, direccionId: UUID, cambios: DireccionC
 
 @router.delete("/{direccionId}", operation_id="eliminarDireccion", status_code=204)
 def eliminar_direccion(clienteId: UUID, direccionId: UUID,
-                       usuario: Usuario = Depends(requiere_roles(CLIENTE))):
+                       usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR))):
     cliente_id, direccion_id = str(clienteId), str(direccionId)
     _preparar(cliente_id, usuario)
     _buscar_direccion_o_404(cliente_id, direccion_id)

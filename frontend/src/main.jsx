@@ -25,6 +25,9 @@ keycloak
     onLoad: 'check-sso',
     pkceMethod: 'S256',
     checkLoginIframe: false,
+    // Scopes que se piden al iniciar sesión (contrato de M2: clientes:read, clientes:write y
+    // clientes.estado:read). Solo si están configurados: un Keycloak que no los tiene rechaza el login.
+    ...(import.meta.env.VITE_KEYCLOAK_SCOPE ? { scope: import.meta.env.VITE_KEYCLOAK_SCOPE } : {}),
   })
   .then((autenticado) => {
     root.render(

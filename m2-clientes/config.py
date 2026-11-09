@@ -20,6 +20,12 @@ JWKS_URL = os.getenv(
 )
 # Emisor esperado del token (claim "iss"). Vacío = no se verifica, hasta que M1 lo defina (#9).
 JWT_ISSUER = os.getenv("JWT_ISSUER", "")
+# Audiencia esperada del token (claim "aud"). Vacío = no se verifica. Con el realm de desarrollo del
+# Grupo 17 va "m2-clientes"; el de la cátedra todavía no la emite.
+JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "")
+# Exigir el scope de cada operación (contrato, FRRe-DS/2026-TPI#18). Apagado por defecto: los Keycloak
+# locales todavía no emiten clientes:read, clientes:write ni clientes.estado:read.
+EXIGIR_SCOPES = os.getenv("EXIGIR_SCOPES", "false").strip().lower() in ("1", "true", "si", "sí", "yes")
 
 # Orígenes que pueden llamar a la API desde el navegador (el front), separados por coma
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
@@ -27,5 +33,5 @@ CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5
 # Límite del cuerpo de los pedidos: 1 MiB, como dice el contrato
 MAX_BODY_BYTES = 1024 * 1024
 
-# Segundos que se sugieren en Retry-After cuando la base no responde
+# Segundos que se sugieren en Retry-After cuando la base o M1 no responden
 RETRY_AFTER_SEGUNDOS = 5

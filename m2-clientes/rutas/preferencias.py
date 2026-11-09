@@ -7,13 +7,13 @@ from fastapi import APIRouter, Depends
 import database
 from models import Preferencias
 from rutas.comunes import a_json, buscar_perfil_o_404
-from security import CLIENTE, OPERADOR, Usuario, requiere_roles, verificar_dueno
+from security import CLIENTE, ESCRIBIR, LEER, OPERADOR, Usuario, requiere_roles, verificar_dueno
 
 router = APIRouter(prefix="/api/v1/clientes/{clienteId}/preferencias", tags=["Preferencias"])
 
 
 @router.get("", operation_id="obtenerPreferencias")
-def obtener_preferencias(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR))):
+def obtener_preferencias(clienteId: UUID, usuario: Usuario = Depends(requiere_roles(CLIENTE, OPERADOR, scope=LEER))):
     """Si el cliente nunca las guardó, devuelve los valores por defecto (listas vacías)."""
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)
@@ -24,7 +24,7 @@ def obtener_preferencias(clienteId: UUID, usuario: Usuario = Depends(requiere_ro
 
 @router.put("", operation_id="guardarPreferencias")
 def guardar_preferencias(clienteId: UUID, preferencias: Preferencias,
-                         usuario: Usuario = Depends(requiere_roles(CLIENTE))):
+                         usuario: Usuario = Depends(requiere_roles(CLIENTE, scope=ESCRIBIR))):
     """Reemplaza todas las preferencias. Es idempotente: repetirlo deja lo mismo."""
     cliente_id = str(clienteId)
     verificar_dueno(usuario, cliente_id)

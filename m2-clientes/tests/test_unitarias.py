@@ -14,13 +14,14 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 
+import config
 import security
 from conftest import token
 from middleware import _FORMATO_REQUEST_ID
 from models import BloqueoNuevo, ClienteCambios, ClienteNuevo, Coordenadas, DireccionNueva, Preferencias
 from rutas.bloqueos import a_milisegundos_utc, esta_vigente, filtro_no_vigentes, filtro_vigentes
 from rutas.comunes import ahora, paginar
-from security import CLIENTE, OPERADOR, SERVICIO, Usuario, requiere_roles, usuario_actual, verificar_dueno
+from security import CLIENTE, ESCRIBIR, LEER, OPERADOR, SERVICIO, Usuario, requiere_roles, usuario_actual, verificar_dueno
 
 
 def credencial(t: str) -> HTTPAuthorizationCredentials:
@@ -98,13 +99,13 @@ def test_sin_credenciales_da_401():
 # ------------------------------------------------------------ Roles por operación y regla de dueño
 
 def test_requiere_roles_se_queda_solo_con_los_admitidos():
-    verificar = requiere_roles(CLIENTE, OPERADOR)
+    verificar = requiere_roles(CLIENTE, OPERADOR, scope=LEER)
     assert verificar(Usuario(sub="a", roles={CLIENTE, SERVICIO})).roles == {CLIENTE}
 
 
 def test_requiere_roles_sin_ninguno_admitido_da_403():
     with pytest.raises(HTTPException) as e:
-        requiere_roles(OPERADOR)(Usuario(sub="a", roles={CLIENTE}))
+        requiere_roles(OPERADOR, scope=LEER)(Usuario(sub="a", roles={CLIENTE}))
     assert e.value.status_code == 403
 
 
@@ -119,13 +120,13 @@ def test_cliente_no_dueno_da_403():
 
 
 def test_operador_puede_ver_cualquiera_si_la_operacion_lo_admite():
-    usuario = requiere_roles(CLIENTE, OPERADOR)(Usuario(sub="abc", roles={CLIENTE, OPERADOR}))
+    usuario = requiere_roles(CLIENTE, OPERADOR, scope=LEER)(Usuario(sub="abc", roles={CLIENTE, OPERADOR}))
     verificar_dueno(usuario, "otro")
 
 
 def test_operador_no_saltea_la_regla_si_la_operacion_es_solo_de_cliente():
     # Alguien con CLIENTE y OPERADOR, en una operación solo de CLIENTE, se trata como cliente
-    usuario = requiere_roles(CLIENTE)(Usuario(sub="abc", roles={CLIENTE, OPERADOR}))
+    usuario = requiere_roles(CLIENTE, scope=ESCRIBIR)(Usuario(sub="abc", roles={CLIENTE, OPERADOR}))
     with pytest.raises(HTTPException) as e:
         verificar_dueno(usuario, "otro")
     assert e.value.status_code == 403
@@ -266,3 +267,26 @@ def test_bloqueo_nuevo_exige_zona_horaria_y_rechaza_null():
         BloqueoNuevo(motivo="Deuda", hasta=None)
     with pytest.raises(ValidationError):
         BloqueoNuevo(motivo="")
+
+
+# ------------------------------------------------------------ Scopes del token
+
+@pytest.mark.parametrize("payload,esperado", [
+    ({"scope": "openid profile clientes:read"}, {"openid", "profile", "clientes:read"}),
+    ({"scope": "clientes:read  clientes.estado:read"}, {"clientes:read", "clientes.estado:read"}),  # espacios de más
+    ({"scope": ""}, set()),
+    ({}, set()),
+    ({"scope": None}, set()),
+    ({"scope": ["clientes:read"]}, set()),  # el estándar es un texto, no una lista
+])
+def test_scopes_del_token(payload, esperado):
+    assert security._scopes_del_token(payload) == esperado
+
+
+def test_requiere_roles_con_scopes_activos(monkeypatch):
+    monkeypatch.setattr(config, "EXIGIR_SCOPES", True)
+    verificar = requiere_roles(CLIENTE, scope=LEER)
+    assert verificar(Usuario(sub="a", roles={CLIENTE}, scopes={LEER})).sub == "a"
+    with pytest.raises(HTTPException) as e:
+        verificar(Usuario(sub="a", roles={CLIENTE}, scopes={ESCRIBIR}))
+    assert e.value.status_code == 403

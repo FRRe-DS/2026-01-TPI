@@ -50,7 +50,7 @@ Es como un mozo: no cocina, le pide el plato a la cocina (M6). Si la cocina no c
 ### Parte 2: el endpoint (`m2-clientes/rutas/historial.py`)
 
 6. Copiá la estructura de `listar_direcciones`:
-   - roles `CLIENTE` y `OPERADOR`;
+   - roles `CLIENTE` y `OPERADOR`, con el scope del contrato: `requiere_roles(CLIENTE, OPERADOR, scope=LEER)`. El parámetro `scope` es obligatorio, y `tests/test_seguridad.py` controla que coincida con el contrato;
    - `verificar_dueno`;
    - `buscar_perfil_o_404`;
    - `page` y `size`.

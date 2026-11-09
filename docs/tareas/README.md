@@ -18,7 +18,7 @@ Este es el **tablero** de lo que falta de M2 y quién lo hace. Cada tarea tiene 
 | [T06](T06-keycloak-usuarios-y-roles.md) | Keycloak listo para usar: roles, usuarios de prueba y cliente del front | Fácil | — | _a definir_ | Pendiente | |
 | [T07](T07-publicar-imagenes-y-compose.md) | Publicar las imágenes en GitHub Packages y levantar todo con un comando | Media | T01 | _a definir_ | Pendiente | |
 | [T08](T08-datos-demo-y-presentacion.md) | Datos de demo, diagramas y armado de la presentación | Fácil | Todas (para la presentación) | _a definir_ | Pendiente | |
-| [L1](L1-scopes-e-idempotencia.md) | Scopes y audiencia (con el Grupo 17) e idempotencia (etapa 5) | Difícil | Respuesta del Grupo 17 | Lucas | Pendiente | |
+| [L1](L1-scopes-e-idempotencia.md) | Scopes y audiencia (con el Grupo 17) e idempotencia (etapa 5) | Difícil | — | Lucas | En curso (scopes listos; falta idempotencia) | |
 | [L2](L1-scopes-e-idempotencia.md) | Revisar los PR, coordinar con otros grupos y pasar todo a `main` | — | Todas | Lucas | Pendiente | |
 
 Estados posibles: **Pendiente** → **En curso** → **PR abierto** → **Mergeado**.
