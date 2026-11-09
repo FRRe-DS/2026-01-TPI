@@ -23,6 +23,7 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 | `frontend/src/api.js` | Único lugar donde el front llama a la API. |
 | `m2-clientes/Dockerfile`, `frontend/Dockerfile` | Imágenes OCI (RNF-04). La del front recibe las `VITE_*` como `--build-arg` (Vite las fija al compilar). La API se levanta con MongoDB usando `docker compose --profile api up -d --build` en `m2-clientes/`. |
 | `.github/workflows/ci.yml` | CI (RNF-17): en cada push y PR corre `pytest` (Python 3.13) y `npm run build` (Node 22). |
+| `docs/primeros-pasos.md`, `docs/tareas/` | Guía para levantar todo desde cero y las guías de las tareas que faltan, con el **tablero** de responsables y estados (`docs/tareas/README.md`). |
 | `keycloak/` | Docker Compose y realm de Keycloak. Lo armó otro integrante y puede venir de la cátedra: `keycloak/.env` tiene credenciales de desarrollo y **sí** está versionado. |
 
 ## Comandos
@@ -101,6 +102,7 @@ No hay linter ni formateador configurado. No agregues uno sin preguntar.
 ## Forma de trabajar
 
 - **El trabajo sigue el plan por etapas.** Cada etapa va en su propia rama `feature/contrato-m2-etapaN`, que sale de `desarrollo-m2` y vuelve a ella con un PR. `main` ya recibió las etapas 1 y 2 (PR #6); lo que sigue se junta en `desarrollo-m2` y pasa a `main` con otro PR. Los PR se mergean con **"Create a merge commit"**, nunca con squash ni rebase: si no, la rama siguiente vuelve a mostrar los commits ya mergeados.
+- **Tareas del equipo:** lo que falta está dividido en tareas con guía propia en `docs/tareas/`. Si te piden trabajar en una, leé primero su guía: respetá los nombres de funciones y archivos que fija (otras tareas dependen de ellos) y, al terminar, actualizá su fila en `docs/tareas/README.md` en el mismo PR. Quien te pide ayuda puede estar empezando: explicá lo que hacés.
 - **Etapas:**
   1. perfil (hecha);
   2. direcciones y preferencias (hecha);
