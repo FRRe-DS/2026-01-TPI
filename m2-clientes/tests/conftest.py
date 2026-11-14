@@ -28,8 +28,12 @@ def base_en_memoria(monkeypatch):
     monkeypatch.setattr(database, "coleccion_clientes", lambda: db["clientes"])
     monkeypatch.setattr(database, "coleccion_direcciones", lambda: db["direcciones"])
     monkeypatch.setattr(database, "coleccion_bloqueos", lambda: db["bloqueos"])
+    monkeypatch.setattr(database, "coleccion_calificaciones", lambda: db["calificaciones"])
     monkeypatch.setattr(database, "base_disponible", lambda: True)
     monkeypatch.setattr(security, "obtener_clave", lambda token: _CLAVE_PUBLICA)
+    # Los mismos índices que en producción: sin el único de calificaciones, el 409 no se podría probar.
+    # (TestClient no corre el arranque de la app, que es donde se crean normalmente)
+    database.asegurar_indices()
     return db
 
 

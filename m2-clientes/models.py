@@ -3,6 +3,7 @@
 from datetime import date, datetime
 from enum import Enum
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -224,3 +225,33 @@ class EstadoCuenta(BaseModel):
     clienteId: str
     estado: EstadoCliente
     bloqueosVigentes: list[Bloqueo]
+
+
+# ------------------------------------------------------------ Calificaciones (RF-2.5)
+
+# strict: el contrato dice "integer". Sin strict, Pydantic aceptaría "5", 5.0 y hasta true (= 1 estrella)
+Puntaje = Annotated[int, Field(strict=True, ge=1, le=5)]
+Comentario = Annotated[str, StringConstraints(max_length=500)]
+
+
+class CalificacionNueva(BaseModel):
+    """Cuerpo de POST .../calificaciones. El conductor no viene acá: sale de M6, así nadie califica a otro."""
+    model_config = ConfigDict(extra="forbid")
+
+    viajeId: UUID
+    puntaje: Puntaje
+    comentario: Comentario | None = None
+
+    @model_validator(mode="after")
+    def sin_nulos(self):
+        _rechazar_nulos(self)
+        return self
+
+
+class Calificacion(BaseModel):
+    calificacionId: str
+    viajeId: str
+    conductorId: str
+    puntaje: int
+    comentario: str | None = None
+    creadoEn: datetime

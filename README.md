@@ -68,7 +68,7 @@ Además, cada pedido que llega trae un **token de Keycloak** que dice quién es 
 |---|---|---|
 | **Python 3.13 + FastAPI** | Construir la API REST | Es rápido de escribir, valida los datos solo y genera la documentación interactiva (Swagger) automáticamente. |
 | **Pydantic** | Definir cómo es un Cliente, una Dirección, etc. | Si alguien manda un teléfono mal escrito o le falta un campo, la API lo rechaza sola con un error claro, sin escribir validaciones a mano. |
-| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias, bloqueos y, más adelante, calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
+| **MongoDB** | Toda la información de M2: perfiles, direcciones, preferencias, bloqueos y calificaciones | Un documento JSON flexible se adapta bien a datos como las direcciones (un cliente puede tener 0 o 10) o las preferencias (listas de opciones). Usamos una sola base para todo el módulo. |
 | **Keycloak** | Login y roles (en desarrollo) | Hace de M1 (identidad) mientras el consorcio define cómo va a ser el M1 real (issue #9 del Grupo 17). Es una adaptación del que dio la cátedra en el TPI 2025, configurado en [keycloak/](keycloak/). No reinventamos la autenticación: solo validamos el token. |
 | **Redis** *(TP2, todavía no implementado)* | Caché y datos que vencen (RNF-11) | Guarda datos en memoria, mucho más rápido que la base, y se les puede poner vencimiento. En M2 serviría para el estado de cuenta, que M5 y M9 van a consultar en cada solicitud, y para recordar las `Idempotency-Key` por un tiempo. |
 | **RabbitMQ** *(TP2, todavía no implementado)* | Mensajería asíncrona (RNF-10) | Un módulo deja un mensaje en una cola y sigue con lo suyo; el otro lo lee cuando puede, y si está caído el mensaje lo espera. Hoy el contrato de M2 no tiene eventos: se usa si el consorcio acuerda alguno. |
@@ -98,15 +98,16 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
 - [x] Imágenes Docker de la API y del front (`Dockerfile` en `m2-clientes/` y en `frontend/`): sin root, con healthcheck y etiquetas OCI. La API se puede levantar junto a MongoDB con `docker compose --profile api up -d` (RNF-04)
 - [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
-- [x] Pruebas automáticas (RNF-07), 280 casos (y 4 más que se activan con la etapa 4): de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, scopes, paginación, fechas, modelos, vigencia de los bloqueos)
+- [x] Pruebas automáticas (RNF-07), 339 casos (y 1 más que se activa con el historial): de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, scopes, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] Scopes del contrato acordados con el Grupo 17 (FRRe-DS/2026-TPI#18): cada operación pide rol y scope juntos, configurable con `EXIGIR_SCOPES` (apagado mientras los Keycloak no emitan los scopes); audiencia opcional (`JWT_AUDIENCE`); `503` si M1 no responde (RNF-12)
 - [x] **Etapa 2 del contrato:** direcciones frecuentes (listado paginado con filtro por tipo, alta, consulta, modificación y baja) y preferencias de vehículo, comunicación y accesibilidad (RF-2.2, RF-2.3)
 - [x] Front en React + Mantine con login de Keycloak para crear y editar el perfil, las direcciones y las preferencias
 - [x] **Etapa 3 del contrato:** estado de cuenta (para el cliente, el operador y los módulos con rol `SERVICIO`, como M5 y M9) y bloqueos administrativos: el operador los registra, con fecha de fin opcional, y los levanta; nunca se borran (RF-2.6). El front avisa al cliente si su cuenta está bloqueada
+- [x] **Etapa 4, calificaciones (T03):** el cliente califica de 1 a 5 al conductor de un viaje terminado, una sola vez por viaje (lo garantiza un índice único en MongoDB); el conductor y el estado del viaje salen de M6 (RF-2.5). El conector a M6 todavía es provisorio: responde `503` hasta que se complete T02
 
 **Pendiente**
 
-- [ ] Etapa 4: calificación del conductor e historial de viajes desde M6 (RF-2.4, RF-2.5)
+- [ ] Etapa 4: historial de viajes desde M6 y el conector real a M6 (RF-2.4, tarea T02)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
 - [ ] Publicar las imágenes de la API y del front en GitHub Packages (GHCR) y armar un compose único con el realm común de Keycloak (RNF-04)
 - [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
@@ -307,6 +308,9 @@ Siguen el contrato común [`contratos/m2_clientes/openapi.yml`](contratos/m2_cli
 | `POST` | `/api/v1/clientes/{clienteId}/bloqueos` | `OPERADOR` | Bloquea al cliente (`motivo` y opcionalmente `hasta`). Exige `Idempotency-Key`. `422` si `hasta` ya pasó |
 | `GET` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Trae un bloqueo |
 | `PATCH` | `/api/v1/clientes/{clienteId}/bloqueos/{bloqueoId}` | `OPERADOR` | Levanta el bloqueo (con `motivo`). `409` si ya no estaba vigente |
+| `GET` | `/api/v1/clientes/{clienteId}/calificaciones` | `CLIENTE` (las suyas), `OPERADOR` | Lista paginada, más nuevas primero |
+| `POST` | `/api/v1/clientes/{clienteId}/calificaciones` | `CLIENTE` (el suyo) | Califica al conductor de un viaje (`viajeId`, `puntaje` de 1 a 5 y `comentario` opcional). Exige `Idempotency-Key`. Consulta a M6: `404` si el viaje no existe o no es suyo, `422` si no terminó, `409` si ya lo calificó, `503` si M6 no responde |
+| `GET` | `/api/v1/clientes/{clienteId}/calificaciones/{calificacionId}` | `CLIENTE` (la suya), `OPERADOR` | Trae una calificación |
 
 Todos menos `/health` requieren `Authorization: Bearer <token>`. Los errores vuelven en formato `application/problem+json`, y toda respuesta trae `X-Request-Id`.
 
@@ -334,6 +338,7 @@ Ejemplo para crear con el `POST` (con el encabezado `Idempotency-Key`, por ejemp
 └── m2-clientes/              # Nuestro microservicio
     ├── main.py               # Arma la app: middleware, manejo de errores y rutas
     ├── rutas/                # Endpoints, un archivo por recurso del contrato
+    ├── integraciones/        # Conectores a otros módulos (m6.py: viajes, provisorio hasta T02)
     ├── models.py             # Cómo es un Cliente (nombres y reglas del contrato)
     ├── security.py           # Validación del token y de los roles
     ├── errores.py            # Respuestas de error en formato problem+json

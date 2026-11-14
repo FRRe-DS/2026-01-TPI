@@ -14,7 +14,8 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 |---|---|
 | `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del de la cátedra (`FRRe-DS/2026-TPI`): PR #5 y, con los scopes, PR #18 (aprobado por los dos grupos el 9/11). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
 | `m2-clientes/main.py` | Arma la app: middleware, manejadores de errores y routers. |
-| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3. |
+| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`, `calificaciones`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3 y las calificaciones de la 4. |
+| `m2-clientes/integraciones/m6.py` | Conector a M6. **Provisorio:** `obtener_viaje(viaje_id, autorizacion)` ya la usa `rutas/calificaciones.py`, pero responde `503` hasta que T02 implemente el pedido HTTP. Al completarla, no cambiar el nombre ni los parámetros. |
 | `m2-clientes/security.py` | Validación del token (JWKS de M1, audiencia opcional), lectura de roles y scopes, `requiere_roles(*roles, scope=...)` y `verificar_dueno`. |
 | `m2-clientes/errores.py` | Errores en formato `application/problem+json` y todos los manejadores de excepciones. |
 | `m2-clientes/middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`). |

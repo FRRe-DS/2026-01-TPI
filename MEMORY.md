@@ -8,7 +8,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Etapa 3 (estado de cuenta y bloqueos, RF-2.6) + aviso de cuenta bloqueada en el front: PR #8, mergeado en `desarrollo-m2`. Probada en real el 7/11 (bloquear y levantar desde Swagger como OPERADOR, aviso en el front): todo OK.
 - CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
 - Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados en la PC el 7/11 con Docker Desktop (API + MongoDB con `--profile api`, front en `5173:80`): todo OK, incluida la prueba de bloqueos.
-- Pruebas: 284 casos (280 + 4 que se activan con la etapa 4) = 220 de API + 64 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
+- Pruebas: 340 casos (339 + 1 que se activa con el historial de T02), con 64 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
+- **T03 (calificaciones, Julián, rama `feature/t03-calificaciones`, 14/11):** las 3 operaciones con 50 pruebas, colección `calificaciones` con índice único `(clienteId, viajeId)` y `puntaje` estricto. `integraciones/m6.py` es **provisorio**: solo la firma de `obtener_viaje` (da 503); T02 completa el cuerpo sin cambiar la firma. Falta el OK de Lucas al diseño de datos (se siguió el de la guía).
 - **Scopes (L1a, 9/11, rama `feature/l1-scopes`):** contrato copiado del PR FRRe-DS/2026-TPI#18 (aprobado por los dos grupos; falta el merge de la cátedra). `requiere_roles(*roles, scope=...)` en cada ruta; `EXIGIR_SCOPES` y `JWT_AUDIENCE` apagados por defecto porque ningún Keycloak que usamos emite scopes ni `aud` (decisión de Lucas: no romper el entorno del equipo); JWKS caído da 503; front con `VITE_KEYCLOAK_SCOPE` opcional.
 - **Trabajo en equipo (8/11):** somos 9 (Lucas + 8 con poca experiencia, se ayudan con IA). Presentación el jue 19/11: cada uno explica qué hizo y cómo, sin ir línea por línea. Lo que falta está dividido en T01–T08 (equipo) y L1–L2 (Lucas), con guías en `docs/tareas/` y el tablero de responsables y estados en `docs/tareas/README.md`, que es el registro de quién hace qué. Guía de inicio: `docs/primeros-pasos.md`. Copia del plan en el proyecto de claude.ai (`claude/tareas-equipo.md`).
 - Pantalla de bienvenida (PR #5). Crear cuenta requiere el registro y el rol por defecto CLIENTE en el realm.
@@ -31,6 +32,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - `DuplicateKeyError` es un `PyMongoError`: capturarlo en el endpoint, si no da 503.
 - Starlette solo lista en `Allow` los métodos de la primera ruta que coincide; el manejador del 405 los junta todos con `ruta.matches(scope)`, porque desde FastAPI 0.143 `include_router` envuelve las rutas.
 - MongoDB guarda milisegundos: usar `ahora()` de `rutas/comunes.py`, si no el POST y el GET devuelven fechas distintas.
+- `TestClient` no corre el arranque de la app: los índices (el único de calificaciones) se crean en `base_en_memoria` con `asegurar_indices()`. En producción se crean al arrancar: si MongoDB no estaba, el único falta hasta reiniciar la API.
 
 ## Decisiones (y por qué)
 - **Adoptamos el contrato del Grupo 17:** cumple todos los RF y resuelve mejor los RNF-03, 09, 13 y 14. Además, RNF-02 pide dos implementaciones por módulo con el mismo contrato.
