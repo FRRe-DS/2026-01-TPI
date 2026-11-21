@@ -8,6 +8,8 @@
 # - bloqueos: un documento por bloqueo administrativo, con el clienteId del bloqueado.
 #   Nunca se borran: levantar uno agrega levantadoEn, levantadoPor y motivoLevantamiento.
 #   "vigente" no se guarda: se calcula al leer (no levantado y sin pasar su "hasta").
+# - calificaciones: una por cliente y viaje, con el conductorId que informó M6 (nunca el del cuerpo).
+#   El índice único (clienteId, viajeId) es el que impide calificar dos veces el mismo viaje.
 import logging
 
 from pymongo import ASCENDING, DESCENDING, MongoClient
@@ -32,6 +34,10 @@ def coleccion_bloqueos():
     return db["bloqueos"]
 
 
+def coleccion_calificaciones():
+    return db["calificaciones"]
+
+
 def asegurar_indices():
     """Crea los índices que usan las consultas. Se llama al arrancar la API; si Mongo no está, sigue igual."""
     try:
@@ -39,6 +45,11 @@ def asegurar_indices():
         coleccion_direcciones().create_index([("clienteId", ASCENDING), ("creadoEn", DESCENDING)])
         # Bloqueos de un cliente, más nuevos primero (listado y cálculo del estado)
         coleccion_bloqueos().create_index([("clienteId", ASCENDING), ("creadoEn", DESCENDING)])
+        # Una calificación por cliente y viaje (RF-2.5). Lo controla la base y no un "if" en el código:
+        # si llegan dos pedidos a la vez, los dos pasarían el if; el índice deja guardar solo uno (RNF-08)
+        coleccion_calificaciones().create_index([("clienteId", ASCENDING), ("viajeId", ASCENDING)], unique=True)
+        # Listado de calificaciones de un cliente, más nuevas primero
+        coleccion_calificaciones().create_index([("clienteId", ASCENDING), ("creadoEn", DESCENDING)])
     except Exception as exc:  # la API arranca igual; /health va a avisar que la base no responde
         log.warning("No se pudieron crear los índices de MongoDB: %s", exc)
 

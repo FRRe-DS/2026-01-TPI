@@ -4,7 +4,8 @@ Microservicio de clientes de la plataforma de movilidad. Implementa el contrato 
 acordado entre el Grupo 1 y el Grupo 17: [`../contratos/m2_clientes/openapi.yml`](../contratos/m2_clientes/openapi.yml).
 
 Hoy cubre las **etapas 1 a 3**: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2), preferencias (RF-2.3)
-y estado de cuenta con bloqueos (RF-2.6). El historial y las calificaciones (con M6) vienen en la etapa 4.
+y estado de cuenta con bloqueos (RF-2.6). De la etapa 4 están las calificaciones al conductor (RF-2.5), que
+consultan a M6 con un conector todavía provisorio; falta el historial de viajes (RF-2.4, tarea T02).
 
 ## Cómo instalarlo y correrlo
 
@@ -50,7 +51,8 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 |---|---|
 | `main.py` | Arma la app: middleware, manejo de errores y rutas |
 | `rutas/comunes.py` | Lo que comparten las rutas: `Idempotency-Key`, paginación, búsqueda del perfil, fecha actual |
-| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py`, `estado_cuenta.py`, `bloqueos.py` | Endpoints, un archivo por recurso del contrato. `bloqueos.py` tiene también la regla de vigencia que usan el perfil y el estado de cuenta |
+| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py`, `estado_cuenta.py`, `bloqueos.py`, `calificaciones.py` | Endpoints, un archivo por recurso del contrato. `bloqueos.py` tiene también la regla de vigencia que usan el perfil y el estado de cuenta |
+| `integraciones/m6.py` | Conector a M6 (Viajes). **Provisorio:** `obtener_viaje` tiene la firma definitiva pero responde `503` hasta que T02 la implemente |
 | `models.py` | Modelos del perfil con los nombres y las reglas del contrato |
 | `security.py` | Validación del token y de los roles (`CLIENTE`, `OPERADOR`, `SERVICIO`) |
 | `errores.py` | Respuestas de error en formato `application/problem+json` (RFC 9457) |
@@ -101,6 +103,27 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
 - **Un bloqueo de otro cliente da `404`** para la ruta pedida, igual que las direcciones.
 - **`SERVICIO` solo entra al estado de cuenta.** Su `sub` nombra al módulo, así que no se aplica la regla de dueño.
 - **`Idempotency-Key` en `crearBloqueo`:** se exige, pero un reintento crea otro bloqueo. Se completa en la etapa 5.
+
+## Decisiones de las calificaciones (etapa 4, tarea T03)
+
+- **Colección propia** (`calificaciones`) con un **índice único por `(clienteId, viajeId)`**. El duplicado lo frena
+  MongoDB al guardar, no un "if ya existe" en el código: si llegan dos pedidos a la vez, el `if` dejaría pasar los
+  dos (RNF-08). El `DuplicateKeyError` se convierte en `409` (`type: /errores/calificacion-duplicada`). Hay otro
+  índice por `(clienteId, creadoEn)` para el listado.
+- **Los índices se crean al arrancar la API.** Si la API arranca antes que MongoDB, el único no existe hasta
+  reiniciarla. Con `docker compose --profile api` no pasa, porque la API espera a que MongoDB esté listo.
+- **Se le pregunta a M6** (`obtener_viaje`) con el mismo token que mandó el cliente. Viaje inexistente o de otro
+  cliente: `404` en los dos casos, para no revelar que el viaje de otro existe. No `COMPLETED`: `422`
+  (`type: /errores/viaje-no-completado`). M6 sin responder: `503`.
+- **El conductor sale de M6** (`driverId`), nunca del cuerpo: el modelo rechaza un `conductorId` con `400`.
+- **`puntaje` estricto:** el contrato dice entero, así que `"5"`, `4.5` o `true` dan `400`
+  (sin `strict`, Pydantic tomaría `true` como 1 estrella).
+- **`viajeId` en su forma normal** (UUID en minúsculas) antes de guardarlo: escribirlo en mayúsculas no esquiva el
+  índice único.
+- **Listado: las más nuevas primero.** El contrato no fija el orden.
+- **`Idempotency-Key`:** se exige; un reintento choca con el índice único y da `409`. Se completa en la etapa 5.
+- **`integraciones/m6.py` es provisorio:** solo tiene la firma de `obtener_viaje`, para poder programar y probar
+  esto antes de T02. Las pruebas reemplazan esa función por un M6 simulado.
 
 ## Seguridad: scopes, audiencia y M1 (contrato del 9/11)
 

@@ -14,7 +14,8 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 |---|---|
 | `contratos/m2_clientes/openapi.yml` | **Contrato común de M2**, copia del de la cátedra (`FRRe-DS/2026-TPI`): PR #5 y, con los scopes, PR #18 (aprobado por los dos grupos el 9/11). Es la fuente de verdad de rutas, campos, roles y códigos de error. |
 | `m2-clientes/main.py` | Arma la app: middleware, manejadores de errores y routers. |
-| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3. |
+| `m2-clientes/rutas/` | Endpoints, un archivo por recurso del contrato (`salud`, `perfil`, `direcciones`, `preferencias`, `estado_cuenta`, `bloqueos`, `calificaciones`). `comunes.py` tiene `IdempotencyKey`, `Page`/`Size`, `paginar`, `buscar_perfil_o_404`, `a_json` y `ahora`. `bloqueos.py` tiene la regla de vigencia (`esta_vigente`, `filtro_vigentes`, `estado_del_cliente`). Hoy cubre las etapas 1 a 3 y las calificaciones de la 4. |
+| `m2-clientes/integraciones/m6.py` | Conector a M6. **Provisorio:** `obtener_viaje(viaje_id, autorizacion)` ya la usa `rutas/calificaciones.py`, pero responde `503` hasta que T02 implemente el pedido HTTP. Al completarla, no cambiar el nombre ni los parámetros. |
 | `m2-clientes/security.py` | Validación del token (JWKS de M1, audiencia opcional), lectura de roles y scopes, `requiere_roles(*roles, scope=...)` y `verificar_dueno`. |
 | `m2-clientes/errores.py` | Errores en formato `application/problem+json` y todos los manejadores de excepciones. |
 | `m2-clientes/middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`). |
@@ -23,6 +24,7 @@ Microservicio de **clientes** (módulo M2) de una plataforma distribuida de movi
 | `frontend/src/api.js` | Único lugar donde el front llama a la API. |
 | `m2-clientes/Dockerfile`, `frontend/Dockerfile` | Imágenes OCI (RNF-04). La del front recibe las `VITE_*` como `--build-arg` (Vite las fija al compilar). La API se levanta con MongoDB usando `docker compose --profile api up -d --build` en `m2-clientes/`. |
 | `.github/workflows/ci.yml` | CI (RNF-17): en cada push y PR corre `pytest` (Python 3.13) y `npm run build` (Node 22). |
+| `.github/workflows/publicar.yml` | Publica la imagen de la API en `ghcr.io/frre-ds/2026-01-tpi-api` en cada push a `desarrollo-m2` o `main` y en tags `v*`. Lo hizo Joaquín Bregant (materia DevOps, ayuda a los grupos con el deploy). El nombre `<repo>-api` es la convención de todos los grupos. Publica aunque fallen las pruebas (es aparte del CI). |
 | `docs/primeros-pasos.md`, `docs/tareas/` | Guía para levantar todo desde cero y las guías de las tareas que faltan, con el **tablero** de responsables y estados (`docs/tareas/README.md`). |
 | `keycloak/` | Docker Compose y realm de Keycloak. Lo armó otro integrante y puede venir de la cátedra: `keycloak/.env` tiene credenciales de desarrollo y **sí** está versionado. |
 
