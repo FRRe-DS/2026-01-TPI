@@ -1,5 +1,6 @@
 # Imagen de la API de M2 Clientes (RNF-04). Formato OCI estándar.
-#   docker build -t ghcr.io/frre-ds/m2-clientes-api:dev .
+#   docker build -t ghcr.io/frre-ds/2026-01-tpi-api:dev .
+# GitHub Actions la publica sola en ghcr.io/frre-ds/2026-01-tpi-api (.github/workflows/publicar.yml).
 # La configuración entra por variables de entorno (RNF-06, ver config.py): el .env no se copia.
 FROM python:3.13-slim
 

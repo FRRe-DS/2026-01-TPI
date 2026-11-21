@@ -97,6 +97,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 - [x] `GET /health` sin token y `X-Request-Id` en todas las respuestas (RNF-14)
 - [x] Configuración por variables de entorno (`.env`): MongoDB, Keycloak y CORS (RNF-06)
 - [x] Imágenes Docker de la API y del front (`Dockerfile` en `m2-clientes/` y en `frontend/`): sin root, con healthcheck y etiquetas OCI. La API se puede levantar junto a MongoDB con `docker compose --profile api up -d` (RNF-04)
+- [x] Imagen de la API publicada en GitHub Packages en cada push a `desarrollo-m2` o `main`: `ghcr.io/frre-ds/2026-01-tpi-api` (workflow `publicar.yml`, PR #20, de Joaquín Bregant, de la materia DevOps) (RNF-04, RNF-17)
 - [x] Integración continua con GitHub Actions: pruebas de la API y build del front en cada push y en cada PR (RNF-17)
 - [x] Pruebas automáticas (RNF-07), 339 casos (y 1 más que se activa con el historial): de API, que verifican cada respuesta contra el contrato, y unitarias de la lógica propia (roles, scopes, paginación, fechas, modelos, vigencia de los bloqueos)
 - [x] Scopes del contrato acordados con el Grupo 17 (FRRe-DS/2026-TPI#18): cada operación pide rol y scope juntos, configurable con `EXIGIR_SCOPES` (apagado mientras los Keycloak no emitan los scopes); audiencia opcional (`JWT_AUDIENCE`); `503` si M1 no responde (RNF-12)
@@ -109,7 +110,7 @@ El servicio sigue la metodología **12-Factor App** (RNF-06). En la práctica si
 
 - [ ] Etapa 4: historial de viajes desde M6 y el conector real a M6 (RF-2.4, tarea T02)
 - [ ] Etapa 5: idempotencia real de los `POST` con `Idempotency-Key` (RNF-09)
-- [ ] Publicar las imágenes de la API y del front en GitHub Packages (GHCR) y armar un compose único con el realm común de Keycloak (RNF-04)
+- [ ] Compose único para levantar todo con un comando (tarea T07) y, cuando esté, el realm común de Keycloak (RNF-04)
 - [ ] Caché del estado de cuenta con Redis y, si el consorcio acuerda eventos, RabbitMQ (TP2)
 
 ---
