@@ -12,11 +12,11 @@ Este es el **tablero** de lo que falta de M2 y quién lo hace. Cada tarea tiene 
 |---|---|---|---|---|---|---|
 | [T01](T01-m6-simulado.md) | M6 simulado: una mini API que devuelve viajes de ejemplo | Fácil | — | _a definir_ | Pendiente | |
 | [T02](T02-historial-de-viajes.md) | Historial de viajes del cliente, pedido a M6 (RF-2.4) | Media | T01 para probar a mano | _a definir_ | Pendiente | |
-| [T03](T03-calificaciones.md) | Calificar al conductor después de un viaje (RF-2.5) | Media | T02 (función `obtener_viaje`) | Julián | En curso | |
+| [T03](T03-calificaciones.md) | Calificar al conductor después de un viaje (RF-2.5) | Media | T02 (función `obtener_viaje`) | Julián | Mergeado | #19 |
 | [T04](T04-front-historial-y-calificaciones.md) | Front: historial de viajes y botón "Calificar" | Media | T02 y T03 | _a definir_ | Pendiente | |
 | [T05](T05-front-panel-operador.md) | Front: panel del operador (ver un cliente, bloquear y levantar) | Fácil-media | T06 (usuario operador) | _a definir_ | Pendiente | |
 | [T06](T06-keycloak-usuarios-y-roles.md) | Keycloak listo para usar: roles, usuarios de prueba y cliente del front | Fácil | — | _a definir_ | Pendiente | |
-| [T07](T07-publicar-imagenes-y-compose.md) | Publicar las imágenes en GitHub Packages y levantar todo con un comando | Media | T01 | _a definir_ | Pendiente | |
+| [T07](T07-publicar-imagenes-y-compose.md) | Levantar todo con un comando (la publicación de la imagen de la API ya la hizo Joaquín, de DevOps, en el #20) | Media | T01 | _a definir_ | Pendiente | |
 | [T08](T08-datos-demo-y-presentacion.md) | Datos de demo, diagramas y armado de la presentación | Fácil | Todas (para la presentación) | _a definir_ | Pendiente | |
 | [L1](L1-scopes-e-idempotencia.md) | Scopes y audiencia (con el Grupo 17) e idempotencia (etapa 5) | Difícil | — | Lucas | En curso (scopes listos; falta idempotencia) | |
 | [L2](L1-scopes-e-idempotencia.md) | Revisar los PR, coordinar con otros grupos y pasar todo a `main` | — | Todas | Lucas | Pendiente | |

@@ -17,7 +17,7 @@ services:
   api:
     profiles: ["api"]
     build: .
-    image: ghcr.io/frre-ds/m2-clientes-api:dev
+    image: ghcr.io/frre-ds/2026-01-tpi-api:dev
     ports:
       - "8000:8000"
     environment:
