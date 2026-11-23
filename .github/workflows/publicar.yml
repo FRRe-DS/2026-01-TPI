@@ -1,8 +1,11 @@
 name: Publicar imagen en GHCR
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main, desarrollo-m2]
+  push:
     tags: ["v*"]
   workflow_dispatch:
 
@@ -18,9 +21,22 @@ jobs:
   publicar-api:
     name: Build y push de la API
     runs-on: ubuntu-latest
+    # Si se disparó por workflow_run, solo corre si el CI pasó en verde
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     steps:
+      - name: Resolver rama y commit
+        id: vars
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHA:0:7}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout del código
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.vars.outputs.sha }}
 
       - name: Login en GHCR
         uses: docker/login-action@v3
@@ -35,10 +51,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=sha-
-            type=ref,event=branch
+            type=raw,value=sha-${{ steps.vars.outputs.short_sha }}
+            type=raw,value=${{ steps.vars.outputs.branch }},enable=${{ github.event_name != 'push' }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.branch == github.event.repository.default_branch }}
             type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build y push de la API
         uses: docker/build-push-action@v6
