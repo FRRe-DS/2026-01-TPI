@@ -40,6 +40,15 @@ def _solicitar_m6(
                         "M6 respondió con un error del servidor.",
                         headers={"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)},
                     )
+
+                if respuesta.status_code >= 400 and respuesta.status_code != 404:
+                    raise ErrorDominio(
+                        503,
+                        "/errores/dependencia-no-disponible",
+                        "M6 no está disponible",
+                        f"M6 rechazó el pedido ({respuesta.status_code}).",
+                        headers={"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)},
+                    )
                 return respuesta
 
             except (httpx.TimeoutException, httpx.NetworkError):

@@ -13,6 +13,11 @@ def responder_no_encontrado(request):
     return httpx.Response(404)
 
 
+def responder_error_cliente(request):
+    responder_error_cliente.intentos += 1
+    return httpx.Response(responder_error_cliente.codigo)
+
+
 def responder_error_conexion(request):
     responder_error_conexion.intentos += 1
     raise httpx.ConnectError("No se pudo conectar con M6", request=request)
@@ -161,3 +166,23 @@ def test_m6_dos_errores_lectura_generan_503():
 
     assert error.value.status == 503
     assert error.value.headers == {"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)}
+
+
+@pytest.mark.parametrize("codigo", [400, 401, 403])
+def test_obtener_viaje_convierte_errores_4xx_en_503(codigo):
+    responder_error_cliente.codigo = codigo
+    responder_error_cliente.intentos = 0
+
+    transporte = httpx.MockTransport(responder_error_cliente)
+
+    with pytest.raises(ErrorDominio) as error:
+        obtener_viaje(
+            "viaje-123",
+            "Bearer token-prueba",
+            transporte=transporte,
+        )
+
+    assert error.value.status == 503
+    assert error.value.tipo == "/errores/dependencia-no-disponible"
+    assert error.value.headers == {"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)}
+    assert responder_error_cliente.intentos == 1
