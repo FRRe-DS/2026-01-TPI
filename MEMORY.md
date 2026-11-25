@@ -1,7 +1,9 @@
 # MEMORY.md — M2 Clientes (Grupo 1, TPI DS 2026)
+
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
+
 - Contrato común de M2 acordado con el Grupo 17 (PR #16 de `FRRe-DS/2026-17-TPI`) y **publicado**: `FRRe-DS/2026-TPI#5` se fusionó en `main` de la cátedra el 21/10. Copia en `contratos/m2_clientes/openapi.yml`.
 - Ramas: todo se integra en `desarrollo-m2` y pasa a `main` con un PR; siempre merge commit. Al 9/11 las dos tienen los mismos archivos (PR #16). La rama por defecto sigue siendo `main` (Lucas no tiene permisos de admin y decidió no pedir el cambio): hay que revisar la base de cada PR; el aviso está en el tablero y en la guía de primeros pasos.
 - Etapas 1 (perfil, PR #2) y 2 (direcciones y preferencias, PR #3): probadas en real el 21 y el 22/10 (Keycloak, MongoDB, front y Swagger como OPERADOR).
@@ -9,8 +11,9 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - CI con GitHub Actions (PR #9): pytest + build del front en cada push y PR.
 - Publicación de la imagen de la API en GHCR (PR #20, 21/11): la hizo Joaquín Bregant, de la materia DevOps, que ayuda a los grupos con el deploy. Imagen `ghcr.io/frre-ds/2026-01-tpi-api` (convención de todos los grupos: `<repo>-api`, paquete público). Desde el PR #23 (23/11) se publica solo cuando el CI pasa en verde, en pushes del mismo repo (`workflow_run`, que usa la versión de `main`). DevOps no necesita el front publicado y usará su propio compose para todos los módulos: T07 queda con un compose solo para nosotros, sin coordinar con Joaquín. T03 hecha por Julián (PR #19).
 - Dockerfiles de la API y del front + `--profile api` en el compose de `m2-clientes` (7/11). Probados en la PC el 7/11 con Docker Desktop (API + MongoDB con `--profile api`, front en `5173:80`): todo OK, incluida la prueba de bloqueos.
-- Pruebas: 340 casos (339 + 1 que se activa con el historial de T02), con 64 unitarias. Las de API no son unitarias: prueban la app entera con base y tokens simulados.
-- **T03 (calificaciones, Julián, rama `feature/t03-calificaciones`, 14/11):** las 3 operaciones con 50 pruebas, colección `calificaciones` con índice único `(clienteId, viajeId)` y `puntaje` estricto. `integraciones/m6.py` es **provisorio**: solo la firma de `obtener_viaje` (da 503); T02 completa el cuerpo sin cambiar la firma. Falta el OK de Lucas al diseño de datos (se siguió el de la guía).
+- Pruebas: 383 casos, todas exitosas tras completar T02. Las de API prueban la app entera con base y tokens simulados; las del conector M6 usan httpx.MockTransport.
+- **T02 (historial de viajes, Juan Manuel, rama `feature/t02-historial`):** implementación terminada en PR #27, abierto hacia `desarrollo-m2`. Conector M6 con timeout de 2 s, un reintento ante errores de red y 5xx, y conversión de otros 4xx a 503 sin reintento (404 devuelve `None`). Endpoint de historial implementado. Suite completa: 383 pruebas exitosas.
+- **T03 (calificaciones, Julián, rama `feature/t03-calificaciones`, 14/11):** las 3 operaciones con 50 pruebas, colección `calificaciones` con índice único `(clienteId, viajeId)` y `puntaje` estricto. Utiliza `obtener_viaje` del conector M6 implementado en T02. Falta el OK de Lucas al diseño de datos (se siguió el de la guía).
 - **Scopes (L1a, 9/11, rama `feature/l1-scopes`):** contrato copiado del PR FRRe-DS/2026-TPI#18 (aprobado por los dos grupos; falta el merge de la cátedra). `requiere_roles(*roles, scope=...)` en cada ruta; `EXIGIR_SCOPES` y `JWT_AUDIENCE` apagados por defecto porque ningún Keycloak que usamos emite scopes ni `aud` (decisión de Lucas: no romper el entorno del equipo); JWKS caído da 503; front con `VITE_KEYCLOAK_SCOPE` opcional.
 - **Trabajo en equipo (8/11):** somos 9 (Lucas + 8 con poca experiencia, se ayudan con IA). Presentación el jue 19/11: cada uno explica qué hizo y cómo, sin ir línea por línea. Lo que falta está dividido en T01–T08 (equipo) y L1–L2 (Lucas), con guías en `docs/tareas/` y el tablero de responsables y estados en `docs/tareas/README.md`, que es el registro de quién hace qué. Guía de inicio: `docs/primeros-pasos.md`. Copia del plan en el proyecto de claude.ai (`claude/tareas-equipo.md`).
 - Pantalla de bienvenida (PR #5). Crear cuenta requiere el registro y el rol por defecto CLIENTE en el realm.
@@ -21,10 +24,11 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - M9 iba a firmar con HS256 mientras M1 fuera simulado (issue #9, 20/10). Ahora la cátedra da Keycloak con cuentas `grupo-NN` (RS256): confirmar con M9 antes de agregar HS256.
 
 ## Aprendizajes y errores a evitar
+
 - Verificar contra la consigna textual (README de `FRRe-DS/2026-TPI`) antes de marcar algo como "falta":
-  - RF-2.1 no pide baja del perfil.
-  - RF-2.3 no pide confort.
-  - M5 recibe el tipo de vehículo en cada solicitud (RF-5.1).
+    - RF-2.1 no pide baja del perfil.
+    - RF-2.3 no pide confort.
+    - M5 recibe el tipo de vehículo en cada solicitud (RF-5.1).
 - Revisar las convenciones de la cátedra antes de pedir cambios: todos los contratos usan `title: DS 2026 API`.
 - El Keycloak de `keycloak/` es una adaptación hecha por Matías del TPI **2025** de la cátedra (`ds-2025-realm`, otro proyecto). No es el M1 de 2026.
 - El realm trae los roles `Cliente`, `Conductor` y `Operador`, pero el contrato exige `CLIENTE`, `OPERADOR` y `SERVICIO`: hay que crearlos a mano (README, paso 3b2).
@@ -36,6 +40,7 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - `TestClient` no corre el arranque de la app: los índices (el único de calificaciones) se crean en `base_en_memoria` con `asegurar_indices()`. En producción se crean al arrancar: si MongoDB no estaba, el único falta hasta reiniciar la API.
 
 ## Decisiones (y por qué)
+
 - **Adoptamos el contrato del Grupo 17:** cumple todos los RF y resuelve mejor los RNF-03, 09, 13 y 14. Además, RNF-02 pide dos implementaciones por módulo con el mismo contrato.
 - **`clienteId` = `sub`, usado como `_id` en MongoDB:** lo pide el contrato y garantiza un solo perfil por usuario.
 - **Roles en `realm_access.roles` y en un claim `roles` en la raíz:** sirve con Keycloak y con lo que se acuerde en el #9.
@@ -49,7 +54,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - **Trabajo por etapas en `desarrollo-m2`:** cada etapa se integra ahí y después pasa a `main` con un PR.
 
 ## Próximos pasos
-1. Lun 9/11: reunión de arranque y asignar responsables en el tablero (`docs/tareas/README.md`).
-2. Calendario (tentativo, solo la presentación es fija): mié 11 entorno listo; vie 13 T01, T06 y `obtener_viaje` de T02 mergeados; lun 16 todos los PR; mar 17 todo en `desarrollo-m2`; mié 18 merge a `main` y ensayo; jue 19 presentación.
+
+1. **T02:** implementación terminada y PR #27 abierto hacia `desarrollo-m2`. Esperar revisión y aprobación de Lucas; después integrar mediante merge commit y actualizar el tablero a `Mergeado`.
+2. **Calendario:** presentación del jueves 19/11. Coordinar con el equipo la integración de las tareas pendientes y el ensayo.
 3. Lucas (L1): mergear `feature/l1-scopes`; activar `EXIGIR_SCOPES`/`JWT_AUDIENCE` cuando haya un realm con scopes y `aud` (T06 o el del Grupo 17); si la cátedra cambia el PR #18 antes de mergearlo, volver a copiar el contrato. Después, idempotencia (etapa 5).
 4. Lucas (L2): revisar PR, mensajes al profe, al consorcio y recordatorio a sando; seguir el issue #7 y a M5 y M9.

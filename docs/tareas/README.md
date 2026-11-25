@@ -11,7 +11,7 @@ Este es el **tablero** de lo que falta de M2 y quién lo hace. Cada tarea tiene 
 | # | Tarea | Dificultad | Depende de | Responsable | Estado | PR |
 |---|---|---|---|---|---|---|
 | [T01](T01-m6-simulado.md) | M6 simulado: una mini API que devuelve viajes de ejemplo | Fácil | — | _a definir_ | Pendiente | |
-| [T02](T02-historial-de-viajes.md) | Historial de viajes del cliente, pedido a M6 (RF-2.4) | Media | T01 para probar a mano | _a definir_ | Pendiente | |
+| [T02](T02-historial-de-viajes.md) | Historial de viajes del cliente, pedido a M6 (RF-2.4) | Media | T01 para probar a mano | Juan Manuel | PR abierto | #27 |
 | [T03](T03-calificaciones.md) | Calificar al conductor después de un viaje (RF-2.5) | Media | T02 (función `obtener_viaje`) | Julián | Mergeado | #19 |
 | [T04](T04-front-historial-y-calificaciones.md) | Front: historial de viajes y botón "Calificar" | Media | T02 y T03 | _a definir_ | Pendiente | |
 | [T05](T05-front-panel-operador.md) | Front: panel del operador (ver un cliente, bloquear y levantar) | Fácil-media | T06 (usuario operador) | _a definir_ | Pendiente | |

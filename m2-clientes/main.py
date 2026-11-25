@@ -14,7 +14,16 @@ import config
 import database
 import errores
 from middleware import controles_generales
-from rutas import bloqueos, calificaciones, direcciones, estado_cuenta, perfil, preferencias, salud
+from rutas import (
+    bloqueos,
+    calificaciones,
+    direcciones,
+    estado_cuenta,
+    historial,
+    perfil,
+    preferencias,
+    salud,
+)
 
 
 @asynccontextmanager
@@ -41,5 +50,14 @@ app.add_middleware(
     expose_headers=["X-Request-Id", "Location", "Retry-After"],
 )
 
-for modulo in (salud, perfil, direcciones, preferencias, estado_cuenta, bloqueos, calificaciones):
+for modulo in (
+    salud,
+    perfil,
+    direcciones,
+    preferencias,
+    estado_cuenta,
+    bloqueos,
+    calificaciones,
+    historial,
+):
     app.include_router(modulo.router)
