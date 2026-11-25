@@ -30,15 +30,29 @@ TITULOS = {
 class ErrorDominio(Exception):
     """Error de negocio con type propio (por ejemplo, un perfil que ya existe)."""
 
-    def __init__(self, status: int, tipo: str, titulo: str, detalle: str | None = None):
+    def __init__(
+        self,
+        status: int,
+        tipo: str,
+        titulo: str,
+        detalle: str | None = None,
+        headers: dict | None = None,
+    ):
         self.status = status
         self.tipo = tipo
         self.titulo = titulo
         self.detalle = detalle
+        self.headers = headers
 
 
-def problema(request: Request, status: int, detalle: str | None = None, tipo: str = "about:blank",
-             titulo: str | None = None, headers: dict | None = None) -> JSONResponse:
+def problema(
+    request: Request,
+    status: int,
+    detalle: str | None = None,
+    tipo: str = "about:blank",
+    titulo: str | None = None,
+    headers: dict | None = None,
+) -> JSONResponse:
     cuerpo = {
         "type": tipo,
         "title": titulo or TITULOS.get(status, "Error"),
@@ -52,15 +66,23 @@ def problema(request: Request, status: int, detalle: str | None = None, tipo: st
     request_id = getattr(request.state, "request_id", None)
     if request_id:
         encabezados["X-Request-Id"] = request_id
-    return JSONResponse(cuerpo, status_code=status, headers=encabezados,
-                        media_type="application/problem+json")
+    return JSONResponse(
+        cuerpo,
+        status_code=status,
+        headers=encabezados,
+        media_type="application/problem+json",
+    )
 
 
 def _texto_validacion(exc: RequestValidationError) -> str:
     """Arma un detalle legible que nombra el campo con error (el contrato no usa errores[])."""
     partes = []
     for err in exc.errors():
-        loc = [str(p) for p in err.get("loc", []) if p not in ("body", "path", "query", "header")]
+        loc = [
+            str(p)
+            for p in err.get("loc", [])
+            if p not in ("body", "path", "query", "header")
+        ]
         campo = ".".join(loc) or "cuerpo"
         partes.append(f"{campo}: {err.get('msg')}")
     return "; ".join(partes)
@@ -91,7 +113,9 @@ def _metodos_de_la_ruta(request: Request) -> str:
     admitidos = []
     for metodo in _METODOS_HTTP:
         scope = {**request.scope, "method": metodo}
-        if any(ruta.matches(scope)[0] == Match.FULL for ruta in request.app.router.routes):
+        if any(
+            ruta.matches(scope)[0] == Match.FULL for ruta in request.app.router.routes
+        ):
             admitidos.append(metodo)
     return ", ".join(admitidos)
 
@@ -102,12 +126,23 @@ async def manejar_validacion(request: Request, exc: RequestValidationError):
 
 
 async def manejar_dominio(request: Request, exc: ErrorDominio):
-    return problema(request, exc.status, exc.detalle, tipo=exc.tipo, titulo=exc.titulo)
+    return problema(
+        request,
+        exc.status,
+        exc.detalle,
+        tipo=exc.tipo,
+        titulo=exc.titulo,
+        headers=exc.headers,
+    )
 
 
 async def manejar_base(request: Request, exc: PyMongoError):
-    return problema(request, 503, "La base de datos de M2 no responde.",
-                    headers={"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)})
+    return problema(
+        request,
+        503,
+        "La base de datos de M2 no responde.",
+        headers={"Retry-After": str(config.RETRY_AFTER_SEGUNDOS)},
+    )
 
 
 async def manejar_inesperado(request: Request, exc: Exception):

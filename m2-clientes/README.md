@@ -3,9 +3,7 @@
 Microservicio de clientes de la plataforma de movilidad. Implementa el contrato común de M2,
 acordado entre el Grupo 1 y el Grupo 17: [`../contratos/m2_clientes/openapi.yml`](../contratos/m2_clientes/openapi.yml).
 
-Hoy cubre las **etapas 1 a 3**: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2), preferencias (RF-2.3)
-y estado de cuenta con bloqueos (RF-2.6). De la etapa 4 están las calificaciones al conductor (RF-2.5), que
-consultan a M6 con un conector todavía provisorio; falta el historial de viajes (RF-2.4, tarea T02).
+Hoy cubre las etapas 1 a 4: salud, perfil (RF-2.1), direcciones frecuentes (RF-2.2), preferencias (RF-2.3), estado de cuenta con bloqueos (RF-2.6), historial de viajes (RF-2.4) y calificaciones al conductor (RF-2.5). El historial y las calificaciones consultan los viajes mediante la API de M6.
 
 ## Cómo instalarlo y correrlo
 
@@ -34,36 +32,40 @@ python -m pytest
 Se lee de variables de entorno o de un archivo `.env` en esta carpeta (RNF-06). Los valores por defecto
 sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `.env.example` como `.env`.
 
-| Variable | Para qué | Por defecto |
-|---|---|---|
-| `MONGO_URL` | Conexión a MongoDB | `mongodb://localhost:27017` |
-| `MONGO_DB` | Nombre de la base | `m2_clientes_db` |
-| `MONGO_TIMEOUT_MS` | Cuánto se espera a la base antes de responder `503` | `2000` |
-| `JWKS_URL` | Claves públicas de M1 para validar el token | Keycloak local, realm `ds-2026-realm` |
-| `JWT_ISSUER` | Emisor esperado del token (vacío = no se verifica) | vacío |
-| `JWT_AUDIENCE` | Audiencia esperada del token (`aud`; vacío = no se verifica). Con un realm que la emita: `m2-clientes` | vacío |
-| `EXIGIR_SCOPES` | Exigir el scope de cada operación, como dice el contrato. Activarlo solo con un Keycloak que emita `clientes:read`, `clientes:write` y `clientes.estado:read` | `false` |
-| `CORS_ORIGINS` | Orígenes del front, separados por coma | `http://localhost:5173` |
+| Variable               | Para qué                                                                                                                                                      | Por defecto                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `MONGO_URL`            | Conexión a MongoDB                                                                                                                                            | `mongodb://localhost:27017`           |
+| `MONGO_DB`             | Nombre de la base                                                                                                                                             | `m2_clientes_db`                      |
+| `MONGO_TIMEOUT_MS`     | Cuánto se espera a la base antes de responder `503`                                                                                                           | `2000`                                |
+| `M6_URL`               | URL base de la API de M6 (Viajes)                                                                                                                             | `http://localhost:3000`               |
+| `M6_TIMEOUT_SEGUNDOS`  | Tiempo máximo de espera por intento al consultar M6                                                                                                           | `2`                                   |
+| `RETRY_AFTER_SEGUNDOS` | Segundos indicados en el encabezado `Retry-After` cuando M6 no está disponible.                                                                               | `5`                                   |
+| `JWKS_URL`             | Claves públicas de M1 para validar el token                                                                                                                   | Keycloak local, realm `ds-2026-realm` |
+| `JWT_ISSUER`           | Emisor esperado del token (vacío = no se verifica)                                                                                                            | vacío                                 |
+| `JWT_AUDIENCE`         | Audiencia esperada del token (`aud`; vacío = no se verifica). Con un realm que la emita: `m2-clientes`                                                        | vacío                                 |
+| `EXIGIR_SCOPES`        | Exigir el scope de cada operación, como dice el contrato. Activarlo solo con un Keycloak que emita `clientes:read`, `clientes:write` y `clientes.estado:read` | `false`                               |
+| `CORS_ORIGINS`         | Orígenes del front, separados por coma                                                                                                                        | `http://localhost:5173`               |
 
 ## Archivos
 
-| Archivo | Qué hace |
-|---|---|
-| `main.py` | Arma la app: middleware, manejo de errores y rutas |
-| `rutas/comunes.py` | Lo que comparten las rutas: `Idempotency-Key`, paginación, búsqueda del perfil, fecha actual |
-| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py`, `estado_cuenta.py`, `bloqueos.py`, `calificaciones.py` | Endpoints, un archivo por recurso del contrato. `bloqueos.py` tiene también la regla de vigencia que usan el perfil y el estado de cuenta |
-| `integraciones/m6.py` | Conector a M6 (Viajes). **Provisorio:** `obtener_viaje` tiene la firma definitiva pero responde `503` hasta que T02 la implemente |
-| `models.py` | Modelos del perfil con los nombres y las reglas del contrato |
-| `security.py` | Validación del token y de los roles (`CLIENTE`, `OPERADOR`, `SERVICIO`) |
-| `errores.py` | Respuestas de error en formato `application/problem+json` (RFC 9457) |
-| `middleware.py` | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`) |
-| `config.py` | Configuración por variables de entorno |
-| `database.py` | Conexión a MongoDB (el `_id` de cada perfil es el `clienteId`) |
-| `tests/` | Pruebas automáticas: de API (validan cada respuesta contra el contrato) y unitarias (`test_unitarias.py`, funciones sueltas sin HTTP) |
-| `requirements.txt` | Librerías de Python (usar Python 3.12 o 3.13) |
-| `requirements-dev.txt` | Librerías para las pruebas |
-| `docker-compose.yml` | MongoDB local y, con `--profile api`, la API en un contenedor |
-| `Dockerfile`, `.dockerignore` | Imagen de la API: Python 3.13 slim, usuario sin privilegios, healthcheck contra `/health`. No copia el `.env` ni los tests |
+| Archivo                                                                                                                    | Qué hace                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.py`                                                                                                                  | Arma la app: middleware, manejo de errores y rutas                                                                                                   |
+| `rutas/comunes.py`                                                                                                         | Lo que comparten las rutas: `Idempotency-Key`, paginación, búsqueda del perfil, fecha actual                                                         |
+| `rutas/salud.py`, `perfil.py`, `direcciones.py`, `preferencias.py`, `estado_cuenta.py`, `bloqueos.py`, `calificaciones.py` | Endpoints, un archivo por recurso del contrato. `bloqueos.py` tiene también la regla de vigencia que usan el perfil y el estado de cuenta            |
+| `integraciones/m6.py`                                                                                                      | Conector a M6 (Viajes): permite consultar viajes individuales y listar el historial mediante su API, con timeout y reintentos ante fallos.           |
+| `rutas/historial.py`                                                                                                       | Endpoint del historial de viajes del cliente (RF-2.4): consulta M6, transforma los datos al contrato de M2 y determina si cada viaje fue calificado. |
+| `models.py`                                                                                                                | Modelos del perfil con los nombres y las reglas del contrato                                                                                         |
+| `security.py`                                                                                                              | Validación del token y de los roles (`CLIENTE`, `OPERADOR`, `SERVICIO`)                                                                              |
+| `errores.py`                                                                                                               | Respuestas de error en formato `application/problem+json` (RFC 9457)                                                                                 |
+| `middleware.py`                                                                                                            | `X-Request-Id`, límite de 1 MiB (`413`) y `Content-Type` JSON (`415`)                                                                                |
+| `config.py`                                                                                                                | Configuración por variables de entorno                                                                                                               |
+| `database.py`                                                                                                              | Conexión a MongoDB (el `_id` de cada perfil es el `clienteId`)                                                                                       |
+| `tests/`                                                                                                                   | Pruebas automáticas: de API (validan cada respuesta contra el contrato) y unitarias (`test_unitarias.py`, funciones sueltas sin HTTP)                |
+| `requirements.txt`                                                                                                         | Librerías de Python (usar Python 3.12 o 3.13)                                                                                                        |
+| `requirements-dev.txt`                                                                                                     | Librerías para las pruebas                                                                                                                           |
+| `docker-compose.yml`                                                                                                       | MongoDB local y, con `--profile api`, la API en un contenedor                                                                                        |
+| `Dockerfile`, `.dockerignore`                                                                                              | Imagen de la API: Python 3.13 slim, usuario sin privilegios, healthcheck contra `/health`. No copia el `.env` ni los tests                           |
 
 ## Decisiones de la etapa 1
 
@@ -122,8 +124,15 @@ sirven para correr todo en la computadora de cada uno; para cambiarlos, copiar `
   índice único.
 - **Listado: las más nuevas primero.** El contrato no fija el orden.
 - **`Idempotency-Key`:** se exige; un reintento choca con el índice único y da `409`. Se completa en la etapa 5.
-- **`integraciones/m6.py` es provisorio:** solo tiene la firma de `obtener_viaje`, para poder programar y probar
-  esto antes de T02. Las pruebas reemplazan esa función por un M6 simulado.
+
+## Decisiones del historial de viajes (etapa 4, tarea T02)
+
+- El endpoint `GET /api/v1/clientes/{clienteId}/viajes` permite consultar el historial de viajes de un cliente.
+- M2 obtiene los viajes mediante el conector `integraciones/m6.py`, sin acceder directamente a la base de datos de M6.
+- El conector utiliza un timeout configurable (`M6_TIMEOUT_SEGUNDOS`) y realiza un reintento ante errores de red o respuestas del servidor.
+- Si M6 continúa sin estar disponible, M2 responde con `503 Service Unavailable` e incluye el encabezado `Retry-After`.
+- M2 adapta los datos recibidos de M6 al modelo de respuesta del historial y consulta sus propias calificaciones para indicar si cada viaje fue calificado.
+- La paginación pública comienza en 0; el conector adapta el número de página al formato utilizado por M6, que comienza en 1.
 
 ## Seguridad: scopes, audiencia y M1 (contrato del 9/11)
 
