@@ -12,6 +12,9 @@ MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 MONGO_DB = os.getenv("MONGO_DB", "m2_clientes_db")
 # Cuánto espera M2 a la base antes de responder 503 (en milisegundos)
 MONGO_TIMEOUT_MS = int(os.getenv("MONGO_TIMEOUT_MS", "2000"))
+# Viajes(M6)
+M6_URL = os.getenv("M6_URL", "http://localhost:3000")
+M6_TIMEOUT_SEGUNDOS = int(os.getenv("M6_TIMEOUT_SEGUNDOS", "2"))
 
 # Identidad (M1). De acá se bajan las claves públicas para validar la firma del token.
 JWKS_URL = os.getenv(
@@ -25,10 +28,20 @@ JWT_ISSUER = os.getenv("JWT_ISSUER", "")
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "")
 # Exigir el scope de cada operación (contrato, FRRe-DS/2026-TPI#18). Apagado por defecto: los Keycloak
 # locales todavía no emiten clientes:read, clientes:write ni clientes.estado:read.
-EXIGIR_SCOPES = os.getenv("EXIGIR_SCOPES", "false").strip().lower() in ("1", "true", "si", "sí", "yes")
+EXIGIR_SCOPES = os.getenv("EXIGIR_SCOPES", "false").strip().lower() in (
+    "1",
+    "true",
+    "si",
+    "sí",
+    "yes",
+)
 
 # Orígenes que pueden llamar a la API desde el navegador (el front), separados por coma
-CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    if o.strip()
+]
 
 # Límite del cuerpo de los pedidos: 1 MiB, como dice el contrato
 MAX_BODY_BYTES = 1024 * 1024

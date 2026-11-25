@@ -5,7 +5,14 @@ from enum import Enum
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 Nombre = Annotated[str, StringConstraints(min_length=1, max_length=100)]
 # Teléfono en formato E.164, por ejemplo +5493624000000
@@ -13,12 +20,13 @@ Telefono = Annotated[str, StringConstraints(pattern=r"^\+[1-9][0-9]{6,14}$")]
 
 
 class EstadoCliente(str, Enum):
-    ACTIVO = "ACTIVO"        # puede solicitar y reservar viajes
+    ACTIVO = "ACTIVO"  # puede solicitar y reservar viajes
     BLOQUEADO = "BLOQUEADO"  # tiene al menos un bloqueo administrativo vigente
 
 
 class ClienteNuevo(BaseModel):
     """Cuerpo de POST /api/v1/clientes."""
+
     model_config = ConfigDict(extra="forbid")  # additionalProperties: false
 
     nombre: Nombre
@@ -29,12 +37,15 @@ class ClienteNuevo(BaseModel):
     @model_validator(mode="after")
     def sin_nulos(self):
         if "fechaNacimiento" in self.model_fields_set and self.fechaNacimiento is None:
-            raise ValueError("fechaNacimiento no puede ser null; si no la tenés, no la mandes")
+            raise ValueError(
+                "fechaNacimiento no puede ser null; si no la tenés, no la mandes"
+            )
         return self
 
 
 class ClienteCambios(BaseModel):
     """Cuerpo de PATCH /api/v1/clientes/{clienteId}: solo los campos que cambian."""
+
     model_config = ConfigDict(extra="forbid")
 
     nombre: Nombre | None = None
@@ -48,12 +59,15 @@ class ClienteCambios(BaseModel):
             raise ValueError("Mandá al menos un campo para cambiar")
         nulos = [c for c in self.model_fields_set if getattr(self, c) is None]
         if nulos:
-            raise ValueError(f"Estos campos no pueden ser null: {', '.join(sorted(nulos))}")
+            raise ValueError(
+                f"Estos campos no pueden ser null: {', '.join(sorted(nulos))}"
+            )
         return self
 
 
 class Cliente(BaseModel):
     """Perfil que devuelve la API."""
+
     clienteId: str
     nombre: str
     apellido: str
@@ -83,6 +97,7 @@ def _sin_repetidos(valores: list, campo: str):
 
 # ------------------------------------------------------------------ Direcciones (RF-2.2)
 
+
 class TipoDireccion(str, Enum):
     FAVORITA = "FAVORITA"
     RECIENTE = "RECIENTE"
@@ -101,6 +116,7 @@ TextoDireccion = Annotated[str, StringConstraints(min_length=1, max_length=255)]
 
 class DireccionNueva(BaseModel):
     """Cuerpo de POST .../direcciones. Guarda solo datos propios: nada de identificadores de M4 (RF-2.2)."""
+
     model_config = ConfigDict(extra="forbid")
 
     tipo: TipoDireccion
@@ -116,6 +132,7 @@ class DireccionNueva(BaseModel):
 
 class DireccionCambios(BaseModel):
     """Cuerpo de PATCH .../direcciones/{direccionId}: solo los campos que cambian."""
+
     model_config = ConfigDict(extra="forbid")
 
     tipo: TipoDireccion | None = None
@@ -142,6 +159,7 @@ class Direccion(BaseModel):
 
 # ------------------------------------------------------------------ Preferencias (RF-2.3)
 
+
 class TipoVehiculo(str, Enum):
     AUTO = "AUTO"
     MOTO = "MOTO"
@@ -162,12 +180,15 @@ class NecesidadAccesibilidad(str, Enum):
 
 class Preferencias(BaseModel):
     """Se usa para el PUT (reemplaza todo) y para la respuesta del GET."""
+
     model_config = ConfigDict(extra="forbid")
 
-    tiposVehiculo: list[TipoVehiculo]          # vacío = cualquiera
-    canales: list[CanalComunicacion]           # vacío = ningún canal opcional
+    tiposVehiculo: list[TipoVehiculo]  # vacío = cualquiera
+    canales: list[CanalComunicacion]  # vacío = ningún canal opcional
     accesibilidad: list[NecesidadAccesibilidad]
-    observacionesAccesibilidad: Annotated[str, StringConstraints(max_length=255)] | None = None
+    observacionesAccesibilidad: (
+        Annotated[str, StringConstraints(max_length=255)] | None
+    ) = None
 
     @model_validator(mode="after")
     def validar(self):
@@ -190,10 +211,13 @@ Motivo = Annotated[str, StringConstraints(min_length=1, max_length=500)]
 
 class BloqueoNuevo(BaseModel):
     """Cuerpo de POST .../bloqueos. Sin `hasta`, el bloqueo sigue hasta que un operador lo levante."""
+
     model_config = ConfigDict(extra="forbid")
 
     motivo: Motivo
-    hasta: AwareDatetime | None = None  # con zona horaria: una fecha sin zona es ambigua (400)
+    hasta: AwareDatetime | None = (
+        None  # con zona horaria: una fecha sin zona es ambigua (400)
+    )
 
     @model_validator(mode="after")
     def sin_nulos(self):
@@ -203,6 +227,7 @@ class BloqueoNuevo(BaseModel):
 
 class LevantamientoBloqueo(BaseModel):
     """Cuerpo de PATCH .../bloqueos/{bloqueoId}: por qué se levanta."""
+
     model_config = ConfigDict(extra="forbid")
 
     motivo: Motivo
@@ -236,6 +261,7 @@ Comentario = Annotated[str, StringConstraints(max_length=500)]
 
 class CalificacionNueva(BaseModel):
     """Cuerpo de POST .../calificaciones. El conductor no viene acá: sale de M6, así nadie califica a otro."""
+
     model_config = ConfigDict(extra="forbid")
 
     viajeId: UUID
@@ -255,3 +281,30 @@ class Calificacion(BaseModel):
     puntaje: int
     comentario: str | None = None
     creadoEn: datetime
+
+
+# ------------------------------------------------------------ Historial de viajes (RF-2.4)
+
+
+class ViajeResumen(BaseModel):
+    """Resumen de un viaje obtenido desde M6."""
+
+    viajeId: UUID
+    estado: str
+    tipoVehiculo: TipoVehiculo | None = None
+    origen: str | None = None
+    destino: str | None = None
+    iniciadoEn: datetime | None = None
+    finalizadoEn: datetime | None = None
+    conductorId: UUID | None = None
+    calificado: bool | None = None
+
+
+class PaginaViajes(BaseModel):
+    """Resultado paginado del historial de viajes."""
+
+    items: list[ViajeResumen]
+    page: int = Field(ge=0)
+    size: int = Field(ge=1)
+    totalElementos: int = Field(ge=0)
+    totalPaginas: int = Field(ge=0)
