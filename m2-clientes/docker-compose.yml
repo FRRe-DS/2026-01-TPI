@@ -33,5 +33,13 @@ services:
       mongodb:
         condition: service_healthy
 
+
+  m6-simulado:
+    profiles: ["api"]
+    build: ../mocks/m6
+    ports:
+      - "3000:3000"
+
+
 volumes:
   m2_mongo_data:
