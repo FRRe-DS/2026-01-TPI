@@ -2,6 +2,8 @@
 
 Página web para que un cliente inicie sesión con Keycloak y cree, vea y edite su perfil, sus direcciones frecuentes y sus preferencias usando la API de M2, según el contrato común (`contratos/m2_clientes/openapi.yml`). Si un operador bloqueó su cuenta, la página le avisa por qué y hasta cuándo.
 
+Un usuario con rol `OPERADOR` ve un panel para buscar un cliente por id, ver su estado de cuenta, bloquearlo y levantar bloqueos.
+
 **Tecnologías:** React 19 + Vite (proyecto y servidor de desarrollo) + Mantine (componentes visuales) + keycloak-js (login).
 
 ## Requisitos
