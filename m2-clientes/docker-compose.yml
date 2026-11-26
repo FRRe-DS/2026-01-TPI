@@ -27,11 +27,23 @@ services:
       # Keycloak corre en tu PC (publicado en el puerto 8080): desde el contenedor se llega por host.docker.internal
       JWKS_URL: http://host.docker.internal:8080/realms/ds-2026-realm/protocol/openid-connect/certs
       CORS_ORIGINS: http://localhost:5173
+      # M6 simulado: dentro de Docker se llama por su nombre de servicio
+      M6_URL: http://m6-simulado:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       mongodb:
         condition: service_healthy
+      m6-simulado:
+        condition: service_started
+
+
+  m6-simulado:
+    profiles: ["api"]
+    build: ../mocks/m6
+    ports:
+      - "3000:3000"
+
 
 volumes:
   m2_mongo_data:

@@ -94,3 +94,24 @@ export const guardarPreferencias = (clienteId, preferencias) =>
 // { clienteId, estado: 'ACTIVO' | 'BLOQUEADO', bloqueosVigentes: [{ motivo, desde, hasta, ... }] }
 export const obtenerEstadoCuenta = (clienteId) =>
   pedir('GET', `/api/v1/clientes/${clienteId}/estado-cuenta`)
+// ---------------------------------------------------------- Roles y bloqueos (RF-2.6 · Operador)
+
+// Los roles del realm llegan en el token como un arreglo de strings en mayúsculas
+export const esOperador = () =>
+  Boolean(keycloak.tokenParsed?.realm_access?.roles?.includes('OPERADOR'))
+
+// Listado paginado de bloqueos de un cliente: { items, page, size, totalElementos, totalPaginas }
+export const listarBloqueos = (clienteId, { page = 0, size = 10, vigente } = {}) => {
+  const params = new URLSearchParams({ page, size })
+  if (vigente !== undefined) params.set('vigente', String(vigente))
+  return pedir('GET', `/api/v1/clientes/${clienteId}/bloqueos?${params}`)
+}
+
+// POST: registra un bloqueo administrativo (hasta es opcional en formato ISO-8601 con zona horaria)
+export const crearBloqueo = (clienteId, bloqueo) =>
+  pedir('POST', `/api/v1/clientes/${clienteId}/bloqueos`, bloqueo,
+    { 'Idempotency-Key': crypto.randomUUID() })
+
+// PATCH: levanta un bloqueo vigente indicando el motivo
+export const levantarBloqueo = (clienteId, bloqueoId, motivo) =>
+  pedir('PATCH', `/api/v1/clientes/${clienteId}/bloqueos/${bloqueoId}`, { motivo })
