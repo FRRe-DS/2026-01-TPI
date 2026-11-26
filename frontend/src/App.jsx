@@ -1,9 +1,7 @@
-// Pantalla principal: muestra el perfil del cliente logueado.
-// - Si todavía no tiene perfil (la API responde 404), muestra el formulario para crearlo (POST).
-// - Si ya lo tiene, muestra el mismo formulario cargado para editarlo (PATCH),
-//   y debajo sus direcciones frecuentes y sus preferencias.
-// - Si la cuenta está bloqueada, muestra arriba el aviso con los motivos (estado de cuenta).
-// El contrato no tiene baja del perfil, así que no hay botón para eliminarlo.
+// Pantalla principal:
+// - Si el usuario tiene rol OPERADOR, muestra el panel administrativo (<PanelOperador />).
+// - Si es CLIENTE, muestra su perfil (POST si no existe, PATCH si ya lo tiene),
+//   el aviso de estado de cuenta y sus direcciones y preferencias.
 import { useEffect, useState } from 'react'
 import {
   AppShell, Alert, Badge, Button, Container, Group, Loader, Stack, Text, Title,
@@ -11,11 +9,12 @@ import {
 import { notifications } from '@mantine/notifications'
 
 import keycloak from './keycloak'
-import { miClienteId, obtenerCliente, crearCliente, actualizarCliente } from './api'
+import { esOperador, miClienteId, obtenerCliente, crearCliente, actualizarCliente } from './api'
 import ClienteForm from './components/ClienteForm'
 import EstadoCuentaAviso from './components/EstadoCuentaAviso'
 import DireccionesCard from './components/DireccionesCard'
 import PreferenciasCard from './components/PreferenciasCard'
+import PanelOperador from './components/PanelOperador'
 
 export default function App() {
   const [cliente, setCliente] = useState(null) // el perfil guardado, o null si no hay
@@ -23,6 +22,7 @@ export default function App() {
   const [error, setError] = useState(null)
 
   const usuario = keycloak.tokenParsed?.preferred_username
+  const operador = esOperador()
 
   async function cargarPerfil() {
     setCargando(true)
@@ -37,10 +37,14 @@ export default function App() {
     }
   }
 
-  // Al abrir la página, traemos el perfil
+  // Al abrir la página, traemos el perfil solo si es cliente (un operador no tiene perfil propio)
   useEffect(() => {
+    if (operador) {
+      setCargando(false)
+      return
+    }
     cargarPerfil()
-  }, [])
+  }, [operador])
 
   async function guardar(datos) {
     if (cliente) {
@@ -79,50 +83,56 @@ export default function App() {
 
       <AppShell.Main>
         <Container size="md" py="md">
-          {cargando && (
-            <Group justify="center" py="xl"><Loader /></Group>
-          )}
+          {operador ? (
+            <PanelOperador />
+          ) : (
+            <>
+              {cargando && (
+                <Group justify="center" py="xl"><Loader /></Group>
+              )}
 
-          {!cargando && error && (
-            <Alert color="red" title="No se pudo cargar el perfil">
-              <Stack gap="sm" align="flex-start">
-                <Text size="sm">{error}</Text>
-                <Button size="xs" variant="light" color="red" onClick={cargarPerfil}>Reintentar</Button>
-              </Stack>
-            </Alert>
-          )}
+              {!cargando && error && (
+                <Alert color="red" title="No se pudo cargar el perfil">
+                  <Stack gap="sm" align="flex-start">
+                    <Text size="sm">{error}</Text>
+                    <Button size="xs" variant="light" color="red" onClick={cargarPerfil}>Reintentar</Button>
+                  </Stack>
+                </Alert>
+              )}
 
-          {!cargando && !error && (
-            <Stack>
-              <div>
-                <Group gap="sm">
-                  <Title order={2}>{cliente ? 'Mi perfil' : 'Creá tu perfil'}</Title>
-                  {cliente && (
-                    <Badge color={cliente.estado === 'ACTIVO' ? 'teal' : 'red'} variant="light">
-                      {cliente.estado === 'ACTIVO' ? 'Cuenta activa' : 'Cuenta bloqueada'}
-                    </Badge>
-                  )}
-                </Group>
-                <Text c="dimmed">
-                  {cliente
-                    ? 'Revisá y actualizá tus datos, direcciones y preferencias de viaje.'
-                    : 'Todavía no tenés un perfil de cliente. Completá tus datos para empezar a viajar.'}
-                </Text>
-              </div>
+              {!cargando && !error && (
+                <Stack>
+                  <div>
+                    <Group gap="sm">
+                      <Title order={2}>{cliente ? 'Mi perfil' : 'Creá tu perfil'}</Title>
+                      {cliente && (
+                        <Badge color={cliente.estado === 'ACTIVO' ? 'teal' : 'red'} variant="light">
+                          {cliente.estado === 'ACTIVO' ? 'Cuenta activa' : 'Cuenta bloqueada'}
+                        </Badge>
+                      )}
+                    </Group>
+                    <Text c="dimmed">
+                      {cliente
+                        ? 'Revisá y actualizá tus datos, direcciones y preferencias de viaje.'
+                        : 'Todavía no tenés un perfil de cliente. Completá tus datos para empezar a viajar.'}
+                    </Text>
+                  </div>
 
-              {cliente && <EstadoCuentaAviso clienteId={cliente.clienteId} estado={cliente.estado} />}
+                  {cliente && <EstadoCuentaAviso clienteId={cliente.clienteId} estado={cliente.estado} />}
 
-              <ClienteForm
-                key={cliente?.actualizadoEn ?? 'nuevo'}
-                inicial={cliente}
-                textoBoton={cliente ? 'Guardar cambios' : 'Crear perfil'}
-                onGuardar={guardar}
-              />
+                  <ClienteForm
+                    key={cliente?.actualizadoEn ?? 'nuevo'}
+                    inicial={cliente}
+                    textoBoton={cliente ? 'Guardar cambios' : 'Crear perfil'}
+                    onGuardar={guardar}
+                  />
 
-              {/* Direcciones y preferencias necesitan que el perfil exista (si no, la API da 404) */}
-              {cliente && <DireccionesCard clienteId={cliente.clienteId} />}
-              {cliente && <PreferenciasCard clienteId={cliente.clienteId} />}
-            </Stack>
+                  {/* Direcciones y preferencias necesitan que el perfil exista (si no, la API da 404) */}
+                  {cliente && <DireccionesCard clienteId={cliente.clienteId} />}
+                  {cliente && <PreferenciasCard clienteId={cliente.clienteId} />}
+                </Stack>
+              )}
+            </>
           )}
         </Container>
       </AppShell.Main>
