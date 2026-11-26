@@ -230,7 +230,7 @@ export default function PanelOperador() {
                     <Stack gap={4} style={{ minWidth: 0 }}>
                       <Group gap="xs">
                         <Badge size="sm" variant="light" color={b.vigente ? 'red' : 'gray'}>
-                          {b.vigente ? 'Vigente' : 'Levantado'}
+                          {b.vigente ? 'Vigente' : b.levantadoEn ? 'Levantado' : 'Vencido'}
                         </Badge>
                         <Text size="xs" c="dimmed">
                           Desde {formatoFecha.format(new Date(b.desde))}
@@ -240,9 +240,9 @@ export default function PanelOperador() {
                         </Text>
                       </Group>
                       <Text size="sm" fw={500}>{b.motivo}</Text>
-                      {!b.vigente && b.motivoLevante && (
+                      {!b.vigente && b.motivoLevantamiento && (
                         <Text size="xs" c="dimmed">
-                          Levante: {b.motivoLevante}
+                          Levante: {b.motivoLevantamiento}
                           {b.levantadoEn ? ` (${formatoFecha.format(new Date(b.levantadoEn))})` : ''}
                         </Text>
                       )}
