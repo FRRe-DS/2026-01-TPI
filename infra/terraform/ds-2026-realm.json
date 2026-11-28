@@ -1,0 +1,239 @@
+{
+  "realm": "ds-2026-realm",
+  "enabled": true,
+  "defaultDefaultClientScopes": [
+    "clientes:read",
+    "clientes:write",
+    "conductores:read",
+    "conductores:write",
+    "ubicacion:read",
+    "ubicacion:write",
+    "despacho:read",
+    "despacho:write",
+    "viajes:read",
+    "viajes:write",
+    "pagos:read",
+    "pagos:write",
+    "reservas:read",
+    "reservas:write"
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "CLIENTE",
+        "description": "Usuario que solicita o reserva viajes (contrato M2)"
+      },
+      {
+        "name": "CONDUCTOR",
+        "description": "Usuario que ofrece servicios de traslado (contrato M2)"
+      },
+      {
+        "name": "OPERADOR",
+        "description": "Administrador del sistema de movilidad (contrato M2)"
+      },
+      {
+        "name": "SERVICIO",
+        "description": "Cuenta de servicio para comunicacion entre modulos (contrato M2)"
+      },
+      {
+        "name": "Cliente",
+        "description": "Usuario que solicita o reserva viajes"
+      },
+      {
+        "name": "Conductor",
+        "description": "Usuario que ofrece servicios de traslado"
+      },
+      {
+        "name": "Operador",
+        "description": "Administrador del sistema de movilidad"
+      }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "clientes:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clientes:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      "protocolMappers": [
+        {
+          "name": "mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "conductores:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "conductores:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "ubicacion:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "ubicacion:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "despacho:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "despacho:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "viajes:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "viajes:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "pagos:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "pagos:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "reservas:read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    },
+    {
+      "name": "reservas:write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "true" }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "m2-frontend",
+      "name": "M2 - Clientes Frontend (SPA)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "post.logout.redirect.uris": "*"
+      },
+      "defaultClientScopes": ["clientes:read", "clientes:write", "viajes:read"]
+    },
+    {
+      "clientId": "grupo-01",
+      "name": "M2 - Clientes",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "68230b9a-f540-4e16-9f56-19180f303676",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["clientes:read", "clientes:write", "viajes:read", "reservas:read"]
+    },
+    {
+      "clientId": "grupo-12",
+      "name": "M6 - Viajes",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "ebbd9f47-b6ff-4efe-9fdd-71651a87139c",
+      "redirectUris": ["*"],
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-grupo-01",
+      "enabled": true,
+      "serviceAccountClientId": "grupo-01",
+      "realmRoles": ["OPERADOR", "SERVICIO", "Operador"]
+    },
+    {
+      "id": "b55573fa-60ed-4a01-a218-8adcfa18384e",
+      "username": "cliente-demo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Juan",
+      "lastName": "Perez",
+      "email": "cliente@movilidad.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ds2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["CLIENTE", "Cliente"]
+    },
+    {
+      "id": "0be00000-0000-4000-8000-000000000001",
+      "username": "operador-demo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Operador",
+      "lastName": "Demo",
+      "email": "operador@movilidad.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ds2026",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["OPERADOR", "Operador"]
+    }
+  ]
+}
