@@ -1,0 +1,138 @@
+name: Desplegar en Azure Container Apps
+
+on:
+  workflow_run:
+    workflows: ["Publicar imagen en GHCR"]
+    types: [completed]
+    branches: [main, desarrollo-m2]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag de la imagen en GHCR a desplegar (ej: desarrollo-m2, latest, sha-xxxxxxx)"
+        required: false
+        default: "desarrollo-m2"
+      min_replicas:
+        description: "Mínimo de réplicas para M2 API (1 = sin réplicas fijas)"
+        required: false
+        default: "1"
+      max_replicas:
+        description: "Máximo de réplicas para M2 API (1 = sin escalado, 3-5 = auto-escalado bajo carga)"
+        required: false
+        default: "3"
+      resource_group:
+        description: "Grupo de recursos en Azure"
+        required: false
+        default: "rg-m2-g01"
+
+concurrency:
+  group: deploy-azure-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository }}-api
+  FRONT_IMAGE: ghcr.io/${{ github.repository }}-front
+
+jobs:
+  desplegar:
+    name: Actualizar M2 API y Front en Azure
+    runs-on: ubuntu-latest
+    # Si se disparó automáticamente por workflow_run, solo corre si la publicación en GHCR terminó en success
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository) }}
+    steps:
+      - name: Resolver tag de imagen y parámetros
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.image_tag || 'desarrollo-m2' }}"
+            RG="${{ inputs.resource_group || 'rg-m2-g01' }}"
+            MIN_REP="${{ inputs.min_replicas || '1' }}"
+            MAX_REP="${{ inputs.max_replicas || '3' }}"
+          else
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            SHORT_SHA="${SHA:0:7}"
+            TAG="sha-${SHORT_SHA}"
+            RG="rg-m2-g01"
+            MIN_REP=""
+            MAX_REP=""
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "rg=${RG}" >> "$GITHUB_OUTPUT"
+          echo "min_replicas=${MIN_REP}" >> "$GITHUB_OUTPUT"
+          echo "max_replicas=${MAX_REP}" >> "$GITHUB_OUTPUT"
+          echo "Desplegando tag: ${TAG} en grupo de recursos: ${RG}"
+
+      - name: Verificar credenciales de Azure
+        id: creds
+        env:
+          AZURE_CREDS_PRESENT: ${{ secrets.AZURE_CREDENTIALS != '' }}
+        run: |
+          if [ "$AZURE_CREDS_PRESENT" != "true" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::El secreto AZURE_CREDENTIALS no está configurado en el repositorio; se omite el despliegue automático en Azure."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login en Azure
+        if: steps.creds.outputs.enabled == 'true'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verificar si el entorno de Azure está encendido
+        id: env_check
+        if: steps.creds.outputs.enabled == 'true'
+        run: |
+          if az containerapp show --name m2-api --resource-group "${{ steps.params.outputs.rg }}" >/dev/null 2>&1; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::El grupo de recursos ${{ steps.params.outputs.rg }} está apagado actualmente (terraform destroy); se omite la actualización de contenedores."
+          fi
+
+      - name: Actualizar contenedor m2-api en Azure Container Apps
+        if: steps.creds.outputs.enabled == 'true' && steps.env_check.outputs.active == 'true'
+        run: |
+          EXTRA_ARGS=""
+          if [ -n "${{ steps.params.outputs.min_replicas }}" ] && [ -n "${{ steps.params.outputs.max_replicas }}" ]; then
+            EXTRA_ARGS="--min-replicas ${{ steps.params.outputs.min_replicas }} --max-replicas ${{ steps.params.outputs.max_replicas }}"
+          fi
+          az containerapp update \
+            --name m2-api \
+            --resource-group "${{ steps.params.outputs.rg }}" \
+            --image "${{ env.API_IMAGE }}:${{ steps.params.outputs.tag }}" \
+            $EXTRA_ARGS
+
+      - name: Actualizar contenedor m2-front en Azure Container Apps
+        if: steps.creds.outputs.enabled == 'true' && steps.env_check.outputs.active == 'true'
+        run: |
+          az containerapp update \
+            --name m2-front \
+            --resource-group "${{ steps.params.outputs.rg }}" \
+            --image "${{ env.FRONT_IMAGE }}:${{ steps.params.outputs.tag }}"
+
+      - name: Verificar estado de salud (/health) de M2 API en Azure
+        if: steps.creds.outputs.enabled == 'true' && steps.env_check.outputs.active == 'true'
+        run: |
+          FQDN=$(az containerapp show \
+            --name m2-api \
+            --resource-group "${{ steps.params.outputs.rg }}" \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+
+          echo "Verificando https://${FQDN}/health ..."
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "https://${FQDN}/health"; then
+              echo ""
+              echo "M2 API saludable en https://${FQDN}"
+              exit 0
+            fi
+            echo "Intento $i falló, esperando 10s..."
+            sleep 10
+          done
+          echo "::error::M2 API no respondió 200 en https://${FQDN}/health tras el despliegue"
+          exit 1
