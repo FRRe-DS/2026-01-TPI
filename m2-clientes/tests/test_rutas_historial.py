@@ -221,6 +221,33 @@ def test_transformar_moto_de_m6_a_m2(cliente_http, sub, m6_simulado):
     assert "conductorId" not in viaje
 
 
+@pytest.mark.parametrize("tipo_m6, tipo_m2", [("AUTO", "AUTO"), ("MOTO", "MOTO")])
+def test_tipo_de_vehiculo_en_castellano_de_m6(cliente_http, sub, m6_simulado, tipo_m6, tipo_m2):
+    # Los M6 reales (grupos 5 y 12) mandan AUTO/MOTO en vez de CAR/MOTORCYCLE
+    m6_simulado["respuesta"] = {
+        "items": [
+            {
+                "id": str(uuid.uuid4()),
+                "state": "COMPLETED",
+                "vehicleType": tipo_m6,
+                "clientId": sub,
+                "createdAt": "2026-11-24T10:00:00Z",
+            }
+        ],
+        "page": 1,
+        "pageSize": 20,
+        "total": 1,
+    }
+
+    respuesta = cliente_http.get(
+        ruta(sub),
+        headers=auth(["CLIENTE"], sub),
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["items"][0]["tipoVehiculo"] == tipo_m2
+
+
 def test_paginacion_del_historial(cliente_http, sub, m6_simulado):
     m6_simulado["respuesta"] = {
         "items": [],
