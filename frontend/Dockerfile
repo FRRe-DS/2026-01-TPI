@@ -27,6 +27,10 @@ LABEL org.opencontainers.image.title="M2 Clientes Front (Grupo 1)" \
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Si al contenedor se le pasan VITE_API_URL o VITE_KEYCLOAK_URL en tiempo de ejecución (por ejemplo en Azure Container Apps),
+# reemplaza las URLs por defecto (localhost:8000 / localhost:8080) en los archivos JS compilados antes de arrancar nginx.
+RUN printf '#!/bin/sh\nset -e\nif [ -n "$VITE_API_URL" ]; then\n  sed -i "s|http://localhost:8000|$VITE_API_URL|g" /usr/share/nginx/html/assets/*.js\nfi\nif [ -n "$VITE_KEYCLOAK_URL" ]; then\n  sed -i "s|http://localhost:8080|$VITE_KEYCLOAK_URL|g" /usr/share/nginx/html/assets/*.js\nfi\n' > /docker-entrypoint.d/40-vite-runtime-env.sh && chmod +x /docker-entrypoint.d/40-vite-runtime-env.sh
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
