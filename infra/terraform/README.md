@@ -57,11 +57,13 @@ También se puede ejecutar manualmente desde la pestaña **Actions → Desplegar
 
 ### Secreto requerido en GitHub
 
-En el repositorio (`Settings → Secrets and variables → Actions`), crear el secreto **`AZURE_CREDENTIALS`** con el JSON generado por:
+En el repositorio (`Settings → Secrets and variables → Actions`), crear el secreto **`AZURE_CREDENTIALS`** con permisos acotados únicamente al grupo de recursos `rg-m2-g01`:
 
 ```powershell
-az ad sp create-for-rbac --name "sp-github-m2-g01" --role contributor --scopes /subscriptions/<TU_SUBSCRIPTION_ID> --sdk-auth
+az ad sp create-for-rbac --name "sp-github-m2-g01" --role contributor --scopes /subscriptions/<TU_SUBSCRIPTION_ID>/resourceGroups/rg-m2-g01 --sdk-auth
 ```
+
+*(Si el secreto `AZURE_CREDENTIALS` no está definido o el entorno en Azure está apagado con `terraform destroy`, el workflow `desplegar.yml` omite el despliegue sin marcar error en los pushes).*
 
 ---
 

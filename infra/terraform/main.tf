@@ -59,6 +59,14 @@ resource "azurerm_container_group" "mongodb" {
     cpu    = "0.5"
     memory = "1.0"
 
+    environment_variables = {
+      MONGO_INITDB_ROOT_USERNAME = var.mongo_user
+    }
+
+    secure_environment_variables = {
+      MONGO_INITDB_ROOT_PASSWORD = var.mongo_password
+    }
+
     ports {
       port     = 27017
       protocol = "TCP"
@@ -72,9 +80,12 @@ resource "azurerm_container_group" "mongodb" {
     memory = "1.0"
 
     environment_variables = {
-      POSTGRES_USER     = "m6"
-      POSTGRES_PASSWORD = "m6-contrasena-de-desarrollo"
-      POSTGRES_DB       = "m6"
+      POSTGRES_USER = var.postgres_user
+      POSTGRES_DB   = "m6"
+    }
+
+    secure_environment_variables = {
+      POSTGRES_PASSWORD = var.postgres_password
     }
 
     ports {
@@ -99,6 +110,11 @@ resource "azurerm_container_app" "keycloak" {
     value = base64encode(file("${path.module}/ds-2026-realm.json"))
   }
 
+  secret {
+    name  = "kc-admin-password"
+    value = var.keycloak_admin_password
+  }
+
   template {
     min_replicas = 1
     max_replicas = 1
@@ -119,11 +135,11 @@ resource "azurerm_container_app" "keycloak" {
       }
       env {
         name  = "KEYCLOAK_ADMIN"
-        value = "admin"
+        value = var.keycloak_admin_user
       }
       env {
-        name  = "KEYCLOAK_ADMIN_PASSWORD"
-        value = "ds2026"
+        name        = "KEYCLOAK_ADMIN_PASSWORD"
+        secret_name = "kc-admin-password"
       }
       env {
         name  = "KC_PROXY"
@@ -166,6 +182,11 @@ resource "azurerm_container_app" "m6_viajes" {
   revision_mode                = "Single"
   tags                         = local.etiquetas
 
+  secret {
+    name  = "database-url"
+    value = "postgresql://${var.postgres_user}:${urlencode(var.postgres_password)}@${azurerm_container_group.mongodb.ip_address}:5432/m6?schema=public"
+  }
+
   template {
     min_replicas = 1
     max_replicas = 1
@@ -181,12 +202,12 @@ resource "azurerm_container_app" "m6_viajes" {
         value = tostring(var.m6_puerto)
       }
       env {
-        name  = "DATABASE_URL"
-        value = "postgresql://m6:m6-contrasena-de-desarrollo@${azurerm_container_group.mongodb.ip_address}:5432/m6?schema=public"
+        name        = "DATABASE_URL"
+        secret_name = "database-url"
       }
       env {
         name  = "ENABLE_DEMO_AUTH"
-        value = "true"
+        value = tostring(var.m6_enable_demo_auth)
       }
       env {
         name  = "AUTH_ISSUER"
@@ -227,6 +248,11 @@ resource "azurerm_container_app" "m2_api" {
   tags                         = local.etiquetas
 
   secret {
+    name  = "mongo-url"
+    value = "mongodb://${var.mongo_user}:${urlencode(var.mongo_password)}@${azurerm_container_group.mongodb.ip_address}:27017/?authSource=admin"
+  }
+
+  secret {
     name  = "otel-headers"
     value = var.otel_exporter_otlp_headers != "" ? var.otel_exporter_otlp_headers : "Authorization=Basic none"
   }
@@ -247,8 +273,8 @@ resource "azurerm_container_app" "m2_api" {
       memory = "1Gi"
 
       env {
-        name  = "MONGO_URL"
-        value = "mongodb://${azurerm_container_group.mongodb.ip_address}:27017"
+        name        = "MONGO_URL"
+        secret_name = "mongo-url"
       }
       env {
         name  = "MONGO_DB"
@@ -264,7 +290,7 @@ resource "azurerm_container_app" "m2_api" {
       }
       env {
         name  = "CORS_ORIGINS"
-        value = "*"
+        value = "https://m2-front.${azurerm_container_app_environment.m2.default_domain}"
       }
 
       # Variables de OpenTelemetry para Grafana Cloud

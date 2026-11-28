@@ -6,10 +6,19 @@ grupo           = "g01"
 region          = "brazilsouth"
 
 # Imágenes en GHCR
-m2_api_image   = "ghcr.io/frre-ds/2026-01-tpi-api:desarrollo-m2"
-m2_front_image = "ghcr.io/frre-ds/2026-01-tpi-front:desarrollo-m2"
-m6_image       = "ghcr.io/frre-ds/m6-viajes-g12:sha-37db0f6"
-m6_puerto      = 3006
+m2_api_image        = "ghcr.io/frre-ds/2026-01-tpi-api:latest"
+m2_front_image      = "ghcr.io/frre-ds/2026-01-tpi-front:latest"
+m6_image            = "ghcr.io/frre-ds/m6-viajes-g12:sha-37db0f6"
+m6_puerto           = 3006
+m6_enable_demo_auth = false
+
+# Credenciales sensibles de bases de datos y Keycloak (nunca se suben a Git)
+mongo_user              = "m2admin"
+mongo_password          = "REEMPLAZAR_CON_CLAVE_SEGURA_MONGO"
+postgres_user           = "m6"
+postgres_password       = "REEMPLAZAR_CON_CLAVE_SEGURA_POSTGRES"
+keycloak_admin_user     = "admin"
+keycloak_admin_password = "REEMPLAZAR_CON_CLAVE_SEGURA_KEYCLOAK"
 
 # Escalado de réplicas de M2 API (cambiar m2_max_replicas = 1 para medir sin réplicas, o 3-5 para auto-escalado)
 m2_min_replicas = 1

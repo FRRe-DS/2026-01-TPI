@@ -18,13 +18,13 @@ variable "region" {
 variable "m2_api_image" {
   description = "Imagen de la API de M2 publicada en GHCR."
   type        = string
-  default     = "ghcr.io/frre-ds/2026-01-tpi-api:desarrollo-m2"
+  default     = "ghcr.io/frre-ds/2026-01-tpi-api:latest"
 }
 
 variable "m2_front_image" {
   description = "Imagen del Frontend de M2 publicada en GHCR."
   type        = string
-  default     = "ghcr.io/frre-ds/2026-01-tpi-front:desarrollo-m2"
+  default     = "ghcr.io/frre-ds/2026-01-tpi-front:latest"
 }
 
 variable "m6_image" {
@@ -37,6 +37,50 @@ variable "m6_puerto" {
   description = "Puerto en el que escucha el contenedor de M6 (Grupo 12 usa 3006)."
   type        = number
   default     = 3006
+}
+
+variable "m6_enable_demo_auth" {
+  description = "Habilita los atajos de demo de M6 (Bearer SYSTEM / panel web de M6). Por defecto false; activar solo durante la demostración."
+  type        = bool
+  default     = false
+}
+
+# --- Credenciales sensibles (se definen en terraform.tfvars, nunca se suben a Git) ---
+
+variable "mongo_user" {
+  description = "Usuario administrador de MongoDB para M2."
+  type        = string
+  default     = "m2admin"
+}
+
+variable "mongo_password" {
+  description = "Contraseña de MongoDB para M2 (sensible, se define en terraform.tfvars)."
+  type        = string
+  sensitive   = true
+}
+
+variable "postgres_user" {
+  description = "Usuario de PostgreSQL para M6."
+  type        = string
+  default     = "m6"
+}
+
+variable "postgres_password" {
+  description = "Contraseña de PostgreSQL para M6 (sensible, se define en terraform.tfvars)."
+  type        = string
+  sensitive   = true
+}
+
+variable "keycloak_admin_user" {
+  description = "Usuario administrador de la consola de Keycloak."
+  type        = string
+  default     = "admin"
+}
+
+variable "keycloak_admin_password" {
+  description = "Contraseña de administrador de Keycloak (sensible, se define en terraform.tfvars)."
+  type        = string
+  sensitive   = true
 }
 
 variable "m2_min_replicas" {
