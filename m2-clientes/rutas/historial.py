@@ -60,6 +60,9 @@ def listar_viajes(
         tipo_vehiculo = {
             "CAR": "AUTO",
             "MOTORCYCLE": "MOTO",
+            # Los M6 de los grupos 5 y 12 ya mandan el tipo en castellano
+            "AUTO": "AUTO",
+            "MOTO": "MOTO",
         }.get(viaje.get("vehicleType"))
 
         items.append(
